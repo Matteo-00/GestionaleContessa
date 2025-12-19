@@ -1,155 +1,21 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<title>Gestionale Ristorante</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Gestionale Ristorante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- FONT -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-<style>
-:root{
-  --bg:#f8fafc;
-  --card:#ffffff;
-  --primary:#111827;
-  --accent:#16a34a;
-  --accent-soft:#dcfce7;
-  --muted:#6b7280;
-  --new:#ea580c;
-}
-
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Inter,system-ui,sans-serif;
-  background:linear-gradient(180deg,#f8fafc,#eef2f7);
-  color:var(--primary);
-}
-
-/* NAVBAR */
-nav{
-  background:#fff;
-  border-bottom:1px solid #e5e7eb;
-  padding:1rem 1.5rem;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-nav strong{font-size:1.1rem}
-
-nav button{
-  background:none;
-  border:none;
-  margin-left:1rem;
-  font-weight:600;
-  color:var(--muted);
-  cursor:pointer;
-}
-
-nav button.active{color:var(--accent)}
-
-main{
-  max-width:1200px;
-  margin:auto;
-  padding:2rem 1rem;
-}
-
-.card{
-  background:var(--card);
-  border-radius:1rem;
-  padding:1.6rem;
-  box-shadow:0 15px 30px rgba(0,0,0,.08);
-}
-
-h2{margin-top:0}
-
-label{
-  font-size:.75rem;
-  color:var(--muted);
-}
-
-input,select,textarea{
-  width:100%;
-  padding:.7rem;
-  margin:.3rem 0 1rem;
-  border-radius:.5rem;
-  border:1px solid #e5e7eb;
-  font-size:.9rem;
-}
-
-input.new{border-color:var(--new);color:var(--new)}
-
-textarea{resize:none;min-height:80px}
-
-button.primary{
-  width:100%;
-  padding:.9rem;
-  background:var(--accent);
-  color:#fff;
-  border:none;
-  border-radius:.6rem;
-  font-weight:600;
-  cursor:pointer;
-}
-
-button.secondary{
-  background:var(--accent-soft);
-  color:var(--accent);
-  border:none;
-  padding:.6rem 1rem;
-  border-radius:.6rem;
-  cursor:pointer;
-}
-
-.grid{
-  display:grid;
-  gap:1rem;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:.9rem;
-}
-
-th,td{
-  padding:.7rem;
-  border-bottom:1px solid #e5e7eb;
-}
-
-th{text-align:left;color:var(--muted)}
-
-.toast{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:#111827;
-  color:#fff;
-  padding:1rem 1.2rem;
-  border-radius:.7rem;
-  opacity:0;
-  transform:translateY(20px);
-  transition:.3s;
-}
-
-.toast.show{opacity:1;transform:none}
-
-.hidden{display:none}
-
-@media(min-width:768px){
-  .grid{grid-template-columns:repeat(4,1fr)}
-}
-</style>
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <nav>
-  <strong>🍽 Gestionale Ristorante</strong>
-  <div>
+  <div class="brand">🍽 Gestionale Ristorante</div>
+  <div class="nav-actions">
     <button id="btnNew" class="active">Nuovo acquisto</button>
     <button id="btnArchive">Archivio</button>
   </div>
@@ -157,97 +23,77 @@ th{text-align:left;color:var(--muted)}
 
 <main>
 
-<!-- NUOVO ACQUISTO -->
-<section id="newSection" class="card">
-  <h2>Nuovo acquisto</h2>
+  <!-- NUOVO ACQUISTO -->
+  <section id="sectionNew" class="card">
+    <h2>Nuovo acquisto</h2>
 
-  <div class="grid">
-    <div>
-      <label>Prodotto</label>
-      <select id="productSelect"><option value="">Seleziona</option></select>
-      <input id="newProduct" placeholder="Nuovo prodotto">
+    <div class="grid">
+      <div>
+        <label>Prodotto</label>
+        <select id="productSelect">
+          <option value="">Seleziona prodotto</option>
+        </select>
+        <input id="newProduct" placeholder="Nuovo prodotto">
+      </div>
+
+      <div>
+        <label>Fornitore</label>
+        <select id="supplierSelect">
+          <option value="">Seleziona fornitore</option>
+        </select>
+        <input id="newSupplier" placeholder="Nuovo fornitore">
+      </div>
+
+      <div>
+        <label>Prezzo (€)</label>
+        <input type="number" id="price" step="0.01">
+      </div>
+
+      <div>
+        <label>Data acquisto</label>
+        <input type="date" id="purchaseDate">
+      </div>
     </div>
 
-    <div>
-      <label>Fornitore</label>
-      <select id="supplierSelect"><option value="">Seleziona</option></select>
-      <input id="newSupplier" placeholder="Nuovo fornitore">
+    <label>Descrizione</label>
+    <textarea id="description"></textarea>
+
+    <button class="primary" id="savePurchase">Salva acquisto</button>
+  </section>
+
+  <!-- ARCHIVIO -->
+  <section id="sectionArchive" class="card hidden">
+    <h2>Archivio acquisti</h2>
+
+    <div class="grid archive-filters">
+      <input type="date" id="fromDate">
+      <input type="date" id="toDate">
+      <select id="priceOrder">
+        <option value="">Ordina per prezzo</option>
+        <option value="asc">Prezzo crescente</option>
+        <option value="desc">Prezzo decrescente</option>
+      </select>
+      <button class="secondary" id="exportExcel">📤 Excel</button>
+      <button class="secondary" id="exportPDF">📄 PDF</button>
     </div>
 
-    <div>
-      <label>Prezzo (€)</label>
-      <input type="number" id="price" step="0.01">
-    </div>
-
-    <div>
-      <label>Data</label>
-      <input type="date" id="purchaseDate">
-    </div>
-  </div>
-
-  <label>Descrizione</label>
-  <textarea id="description"></textarea>
-
-  <button class="primary" id="save">Salva acquisto</button>
-</section>
-
-<!-- ARCHIVIO -->
-<section id="archiveSection" class="card hidden">
-  <h2>Archivio acquisti</h2>
-
-  <div class="grid">
-    <input type="date" id="from">
-    <input type="date" id="to">
-    <select id="order">
-      <option value="">Prezzo</option>
-      <option value="asc">Crescente</option>
-      <option value="desc">Decrescente</option>
-    </select>
-    <button class="secondary" onclick="exportCSV()">📤 Excel</button>
-  </div>
-
-  <table>
-    <thead>
-      <tr><th>Data</th><th>Prodotto</th><th>Fornitore</th><th>Prezzo</th></tr>
-    </thead>
-    <tbody id="table"></tbody>
-  </table>
-</section>
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Prodotto</th>
+          <th>Fornitore</th>
+          <th>Prezzo</th>
+        </tr>
+      </thead>
+      <tbody id="archiveTable"></tbody>
+    </table>
+  </section>
 
 </main>
 
-<div class="toast" id="toast">Acquisto aggiunto</div>
+<div id="toast" class="toast">Acquisto aggiunto correttamente</div>
 
-<script>
-let products = JSON.parse(localStorage.getItem('products')) || [];
-let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
-let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
-
-const qs=id=>document.getElementById(id);
-const toast=qs('toast');
-
-/* NAV */
-btnNew.onclick=()=>show('new');
-btnArchive.onclick=()=>show('archive');
-
-function show(type){
-  newSection.classList.toggle('hidden',type!=='new');
-  archiveSection.classList.toggle('hidden',type!=='archive');
-  btnNew.classList.toggle('active',type==='new');
-  btnArchive.classList.toggle('active',type==='archive');
-  render();
-}
-
-/* SELECT */
-function refresh(){
-  productSelect.innerHTML='<option value=\"\">Seleziona</option>';
-  supplierSelect.innerHTML='<option value=\"\">Seleziona</option>';
-  products.forEach(p=>productSelect.innerHTML+=`<option>${p}</option>`);
-  suppliers.forEach(s=>supplierSelect.innerHTML+=`<option>${s}</option>`);
-}
-
-/* UX */
-newProduct.oninput=()=>newProduct.classList.toggle('new',newProduct.value);
-newSupplier.oninput=()=>newSupplier.classList.toggle('new',newSupplier.value);
-
-/* SAVE*
+<script src="app.js"></script>
+</body>
+</html>
