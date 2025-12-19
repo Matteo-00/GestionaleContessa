@@ -10,6 +10,9 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -23,88 +26,89 @@
 
 <main>
 
-  <!-- NUOVO ACQUISTO -->
-  <section id="sectionNew" class="card">
-    <h2>Nuovo acquisto</h2>
+<section id="sectionNew" class="card">
+  <h2>Nuovo acquisto</h2>
 
-    <div class="grid">
-      <div>
-        <label>Prodotto</label>
-        <select id="productSelect">
-          <option value="">Seleziona prodotto</option>
-        </select>
-        <input id="newProduct" placeholder="Nuovo prodotto">
-      </div>
-
-      <div>
-        <label>Fornitore</label>
-        <select id="supplierSelect">
-          <option value="">Seleziona fornitore</option>
-        </select>
-        <input id="newSupplier" placeholder="Nuovo fornitore">
-      </div>
-
-      <div>
-        <label>Prezzo (€)</label>
-        <input type="number" id="price" step="0.01">
-      </div>
-
-      <div>
-        <label>Data acquisto</label>
-        <input type="date" id="purchaseDate">
-      </div>
+  <div class="grid">
+    <div>
+      <label>Prodotto</label>
+      <select id="productSelect">
+        <option value="">Seleziona prodotto</option>
+      </select>
+      <input id="newProduct" placeholder="Nuovo prodotto">
     </div>
 
-    <label>Descrizione</label>
-    <textarea id="description"></textarea>
-
-    <button class="primary" id="savePurchase">Salva acquisto</button>
-  </section>
-
-  <!-- ARCHIVIO -->
-  <section id="sectionArchive" class="card hidden">
-    <h2>Archivio acquisti</h2>
-
-    <div class="filters">
-      <h3>Filtri avanzati</h3>
-
-      <div class="filter-group">
-        <select id="filterProduct">
-          <option value="">Tutti i prodotti</option>
-        </select>
-
-        <select id="filterSupplier">
-          <option value="">Tutti i fornitori</option>
-        </select>
-
-        <input type="number" id="filterPrice" placeholder="Prezzo esatto €">
-
-        <input type="date" id="fromDate">
-        <input type="date" id="toDate">
-      </div>
+    <div>
+      <label>Fornitore</label>
+      <select id="supplierSelect">
+        <option value="">Seleziona fornitore</option>
+      </select>
+      <input id="newSupplier" placeholder="Nuovo fornitore">
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Prodotto</th>
-          <th>Fornitore</th>
-          <th>Prezzo</th>
-        </tr>
-      </thead>
-      <tbody id="archiveTable"></tbody>
-    </table>
-
-    <div class="export">
-      <button class="secondary" id="exportExcel">📤 Excel</button>
-      <button class="secondary" id="exportPDF">📄 PDF</button>
+    <div>
+      <label>Prezzo (€)</label>
+      <input type="number" id="price" step="0.01">
     </div>
-  </section>
+
+    <div>
+      <label>Data</label>
+      <input type="date" id="purchaseDate">
+    </div>
+  </div>
+
+  <button class="primary" id="savePurchase">Salva acquisto</button>
+</section>
+
+<section id="sectionArchive" class="card hidden">
+  <h2>Archivio acquisti</h2>
+
+  <!-- FILTRI -->
+  <div class="filters">
+    <div class="filter-group">
+      <select id="filterProduct">
+        <option value="">Tutti i prodotti</option>
+      </select>
+
+      <select id="filterSupplier">
+        <option value="">Tutti i fornitori</option>
+      </select>
+
+      <input type="number" id="filterPrice" placeholder="Prezzo esatto €">
+
+      <select id="filterOrder">
+        <option value="">Ordina</option>
+        <option value="priceAsc">Prezzo crescente</option>
+        <option value="priceDesc">Prezzo decrescente</option>
+        <option value="dateAsc">Data più vecchia</option>
+        <option value="dateDesc">Data più recente</option>
+      </select>
+
+      <input type="date" id="filterDate">
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Prodotto</th>
+        <th>Fornitore</th>
+        <th>Prezzo (€)</th>
+      </tr>
+    </thead>
+    <tbody id="archiveTable"></tbody>
+  </table>
+
+  <div class="export">
+    <button class="secondary" id="exportExcel">📥 Esporta Excel</button>
+    <button class="secondary" id="exportPDF">📄 PDF</button>
+  </div>
+</section>
 
 </main>
 
-<div id="toast" class="toast">Acquisto aggiunto correttamente</div>
+<div id="toast" class="toast">Acquisto salvato</div>
 
 <script src="app.js"></script>
 </body>
