@@ -2,18 +2,18 @@ let products = JSON.parse(localStorage.getItem('products')) || [];
 let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
 let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
 
-// ELEMENTS
+/* ELEMENTI */
 const sectionNew = document.getElementById('sectionNew');
 const sectionArchive = document.getElementById('sectionArchive');
 const btnNew = document.getElementById('btnNew');
 const btnArchive = document.getElementById('btnArchive');
 const toast = document.getElementById('toast');
 
-// NAVIGATION
-btnNew.onclick = () => toggleView('new');
-btnArchive.onclick = () => toggleView('archive');
+/* NAV */
+btnNew.onclick = () => switchView('new');
+btnArchive.onclick = () => switchView('archive');
 
-function toggleView(view){
+function switchView(view){
   sectionNew.classList.toggle('hidden', view !== 'new');
   sectionArchive.classList.toggle('hidden', view !== 'archive');
   btnNew.classList.toggle('active', view === 'new');
@@ -21,19 +21,29 @@ function toggleView(view){
   renderArchive();
 }
 
-// SELECTS
+/* SELECT DINAMICI */
 function refreshSelects(){
-  productSelect.innerHTML = '<option value=\"\">Seleziona prodotto</option>';
-  supplierSelect.innerHTML = '<option value=\"\">Seleziona fornitore</option>';
-  products.forEach(p => productSelect.innerHTML += `<option>${p}</option>`);
-  suppliers.forEach(s => supplierSelect.innerHTML += `<option>${s}</option>`);
+  productSelect.innerHTML = '<option value="">Seleziona prodotto</option>';
+  supplierSelect.innerHTML = '<option value="">Seleziona fornitore</option>';
+  filterProduct.innerHTML = '<option value="">Tutti i prodotti</option>';
+  filterSupplier.innerHTML = '<option value="">Tutti i fornitori</option>';
+
+  products.forEach(p=>{
+    productSelect.innerHTML += `<option>${p}</option>`;
+    filterProduct.innerHTML += `<option>${p}</option>`;
+  });
+
+  suppliers.forEach(s=>{
+    supplierSelect.innerHTML += `<option>${s}</option>`;
+    filterSupplier.innerHTML += `<option>${s}</option>`;
+  });
 }
 
-// UX new fields
+/* UX nuovi campi */
 newProduct.oninput = () => newProduct.classList.toggle('new', newProduct.value);
 newSupplier.oninput = () => newSupplier.classList.toggle('new', newSupplier.value);
 
-// SAVE PURCHASE
+/* SALVATAGGIO */
 savePurchase.onclick = () => {
   const np = newProduct.value.trim();
   const ns = newSupplier.value.trim();
@@ -59,22 +69,31 @@ savePurchase.onclick = () => {
   newProduct.classList.remove('new');
   newSupplier.classList.remove('new');
 
-  showToast();
   refreshSelects();
+  showToast();
 };
 
-// ARCHIVE RENDER
+/* ARCHIVIO + FILTRI */
 function renderArchive(){
   archiveTable.innerHTML = '';
   let data = [...purchases];
 
-  if(fromDate.value) data = data.filter(p => p.date >= fromDate.value);
-  if(toDate.value) data = data.filter(p => p.date <= toDate.value);
+  if(filterProduct.value)
+    data = data.filter(p => p.product === filterProduct.value);
 
-  if(priceOrder.value === 'asc') data.sort((a,b)=>a.price-b.price);
-  if(priceOrder.value === 'desc') data.sort((a,b)=>b.price-a.price);
+  if(filterSupplier.value)
+    data = data.filter(p => p.supplier === filterSupplier.value);
 
-  data.forEach(p => {
+  if(filterPrice.value)
+    data = data.filter(p => p.price == filterPrice.value);
+
+  if(fromDate.value)
+    data = data.filter(p => p.date >= fromDate.value);
+
+  if(toDate.value)
+    data = data.filter(p => p.date <= toDate.value);
+
+  data.forEach(p=>{
     archiveTable.innerHTML += `
       <tr>
         <td>${p.date}</td>
@@ -83,12 +102,24 @@ function renderArchive(){
         <td>€ ${p.price.toFixed(2)}</td>
       </tr>`;
   });
+
+  highlightFilters();
 }
 
-// EXPORT
+/* EVIDENZIA FILTRI ATTIVI */
+function highlightFilters(){
+  [filterProduct, filterSupplier, filterPrice, fromDate, toDate].forEach(el=>{
+    el.classList.toggle('filter-active', el.value);
+  });
+}
+
+/* EXPORT */
 exportExcel.onclick = () => {
   let csv = 'Data,Prodotto,Fornitore,Prezzo\n';
-  purchases.forEach(p => csv += `${p.date},${p.product},${p.supplier},${p.price}\n`);
+  purchases.forEach(p=>{
+    csv += `${p.date},${p.product},${p.supplier},${p.price}\n`;
+  });
+
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
   a.download = 'archivio_acquisti.csv';
@@ -97,17 +128,16 @@ exportExcel.onclick = () => {
 
 exportPDF.onclick = () => window.print();
 
-// FILTER EVENTS
-[fromDate, toDate, priceOrder].forEach(el =>
-  el.addEventListener('change', renderArchive)
-);
+/* EVENTI FILTRI */
+[filterProduct, filterSupplier, filterPrice, fromDate, toDate]
+  .forEach(el => el.addEventListener('change', renderArchive));
 
-// TOAST
+/* TOAST */
 function showToast(){
   toast.classList.add('show');
   setTimeout(()=>toast.classList.remove('show'),2000);
 }
 
-// INIT
+/* INIT */
 refreshSelects();
 renderArchive();
