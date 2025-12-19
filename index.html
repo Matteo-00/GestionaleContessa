@@ -5,113 +5,138 @@
   <title>Gestionale Ristorante</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 
-  <!-- EXCEL -->
+  <!-- Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
-<nav>
-  <div class="brand">🍽 Gestionale Ristorante</div>
-  <div class="nav-actions">
-    <button id="btnNew" class="active">Nuovo acquisto</button>
-    <button id="btnArchive">Archivio</button>
-  </div>
-</nav>
+<header class="topbar">
+  <div class="logo">🍷 RistoManager</div>
+  <nav>
+    <button data-page="new" class="active">Nuovo</button>
+    <button data-page="archive">Archivio</button>
+    <button data-page="stats">Statistiche</button>
+    <span class="indicator"></span>
+  </nav>
+</header>
 
 <main>
 
 <!-- NUOVO ACQUISTO -->
-<section id="sectionNew" class="card">
-  <h2>Nuovo acquisto</h2>
+<section id="page-new" class="page active">
+  <div class="card">
+    <h2>Nuovo acquisto</h2>
 
-  <div class="grid">
-    <div>
-      <label>Prodotto</label>
-      <select id="productSelect"></select>
-      <input id="newProduct" placeholder="Nuovo prodotto">
+    <div class="grid">
+      <div>
+        <label>Prodotto</label>
+        <select id="productSelect"></select>
+        <input id="newProduct" placeholder="Nuovo prodotto">
+      </div>
+
+      <div>
+        <label>Fornitore</label>
+        <select id="supplierSelect"></select>
+        <input id="newSupplier" placeholder="Nuovo fornitore">
+      </div>
+
+      <div>
+        <label>Prezzo (€)</label>
+        <input type="number" id="price" step="0.01">
+      </div>
+
+      <div>
+        <label>Data</label>
+        <input type="date" id="purchaseDate">
+      </div>
     </div>
 
-    <div>
-      <label>Fornitore</label>
-      <select id="supplierSelect"></select>
-      <input id="newSupplier" placeholder="Nuovo fornitore">
-    </div>
-
-    <div>
-      <label>Prezzo (€)</label>
-      <input type="number" id="price" step="0.01">
-    </div>
-
-    <div>
-      <label>Data</label>
-      <input type="date" id="purchaseDate">
-    </div>
+    <button class="primary" id="savePurchase">Salva acquisto</button>
   </div>
-
-  <button class="primary" id="savePurchase">Salva acquisto</button>
 </section>
 
 <!-- ARCHIVIO -->
-<section id="sectionArchive" class="card hidden">
-  <h2>Archivio acquisti</h2>
+<section id="page-archive" class="page">
+  <div class="card">
+    <h2>Archivio acquisti</h2>
 
-  <!-- FILTRI (4 ESATTI) -->
-  <div class="filters">
+    <!-- FILTRI -->
+    <div class="filters">
+      <select id="filterProduct"></select>
+      <select id="filterSupplier"></select>
 
-    <!-- 1 PRODOTTO -->
-    <select id="filterProduct"></select>
+      <select id="filterPriceMode">
+        <option value="">Prezzo</option>
+        <option value="asc">Crescente</option>
+        <option value="desc">Decrescente</option>
+        <option value="exact">Prezzo esatto</option>
+      </select>
+      <input type="number" id="filterPriceExact" class="hidden" placeholder="€ esatto">
 
-    <!-- 2 FORNITORE -->
-    <select id="filterSupplier"></select>
-
-    <!-- 3 PREZZO -->
-    <select id="filterPriceMode">
-      <option value="">Prezzo</option>
-      <option value="asc">Crescente</option>
-      <option value="desc">Decrescente</option>
-      <option value="exact">Prezzo esatto</option>
-    </select>
-    <input type="number" id="filterPriceExact" placeholder="€ esatto" class="hidden">
-
-    <!-- 4 DATA -->
-    <select id="filterDateMode">
-      <option value="">Data</option>
-      <option value="recent">Più recente</option>
-      <option value="old">Meno recente</option>
-      <option value="range">Intervallo date</option>
-    </select>
-
-    <div id="dateRange" class="hidden">
-      <input type="date" id="dateFrom">
-      <input type="date" id="dateTo">
+      <select id="filterDateMode">
+        <option value="">Data</option>
+        <option value="recent">Più recente</option>
+        <option value="old">Meno recente</option>
+        <option value="range">Intervallo</option>
+      </select>
+      <div id="dateRange" class="hidden">
+        <input type="date" id="dateFrom">
+        <input type="date" id="dateTo">
+      </div>
     </div>
 
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Prodotto</th>
+          <th>Fornitore</th>
+          <th>Prezzo</th>
+        </tr>
+      </thead>
+      <tbody id="archiveTable"></tbody>
+    </table>
+
+    <div class="pagination">
+      <button id="prevPage">←</button>
+      <span id="pageInfo"></span>
+      <button id="nextPage">→</button>
+    </div>
+
+    <div class="export">
+      <button id="exportExcel">Excel</button>
+      <button id="exportPDF">PDF</button>
+    </div>
   </div>
+</section>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Prodotto</th>
-        <th>Fornitore</th>
-        <th>Prezzo (€)</th>
-      </tr>
-    </thead>
-    <tbody id="archiveTable"></tbody>
-  </table>
+<!-- STATISTICHE -->
+<section id="page-stats" class="page">
+  <div class="card">
+    <h2>Statistiche spese</h2>
 
-  <div class="export">
-    <button id="exportExcel">📥 Excel</button>
-    <button id="exportPDF">📄 PDF</button>
+    <div class="filters">
+      <select id="statsProduct"></select>
+      <select id="statsSupplier"></select>
+    </div>
+
+    <canvas id="statsChart" height="120"></canvas>
   </div>
 </section>
 
 </main>
 
-<div id="toast" class="toast">Acquisto salvato</div>
+<footer>
+  <p>© Gestionale Ristorante • Design moderno & funzionale</p>
+</footer>
+
+<div id="toast">Acquisto salvato</div>
 
 <script src="app.js"></script>
 </body>
