@@ -2,88 +2,111 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Gestionale Ristorante</title>
+  <title>Gestionale Acquisti Ristorante</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
   <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-  <header class="glass">
-    <h1>📦 Gestionale Acquisti</h1>
-    <p>Controllo elegante dei costi del tuo ristorante</p>
-  </header>
 
-  <main>
+<header>
+  <h1>Gestionale Acquisti</h1>
+  <p>Controllo elegante dei costi del tuo ristorante</p>
 
-    <!-- NUOVO ACQUISTO -->
-    <section class="card">
-      <h2>➕ Nuovo Acquisto</h2>
+  <div class="top-actions">
+    <button id="openArchive">📂 Archivio</button>
+    <button id="openStats">📊 Analisi</button>
+  </div>
+</header>
 
-      <div class="grid">
-        <div>
-          <label>Prodotto</label>
-          <select id="productSelect"></select>
-          <input id="newProduct" placeholder="Nuovo prodotto">
-        </div>
+<main>
 
-        <div>
-          <label>Fornitore</label>
-          <select id="supplierSelect"></select>
-          <input id="newSupplier" placeholder="Nuovo fornitore">
-        </div>
+  <!-- NUOVO ACQUISTO -->
+  <section class="card">
+    <h2>Nuovo acquisto</h2>
 
-        <div>
-          <label>Prezzo (€)</label>
-          <input type="number" id="price" step="0.01">
-        </div>
+    <div class="grid">
+      <div>
+        <label>Prodotto</label>
+        <select id="productSelect"></select>
+        <input id="newProduct" placeholder="Nuovo prodotto">
       </div>
 
-      <label>Descrizione</label>
-      <textarea id="description" placeholder="Note sull'acquisto"></textarea>
-
-      <button onclick="addPurchase()">Salva acquisto</button>
-    </section>
-
-    <!-- FILTRI -->
-    <section class="card subtle">
-      <h2>🔍 Filtri avanzati</h2>
-
-      <div class="filters">
-        <select id="filterProduct"></select>
-        <select id="filterSupplier"></select>
-        <input type="date" id="filterDate">
-        <input type="number" id="filterPrice" placeholder="Prezzo max">
+      <div>
+        <label>Fornitore</label>
+        <select id="supplierSelect"></select>
+        <input id="newSupplier" placeholder="Nuovo fornitore">
       </div>
-    </section>
 
-    <!-- STORICO -->
-    <section class="card">
-      <h2>📊 Storico Acquisti</h2>
+      <div>
+        <label>Prezzo (€)</label>
+        <input type="number" id="price" step="0.01">
+      </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Prodotto</th>
-            <th>Fornitore</th>
-            <th>Prezzo</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </section>
+      <div>
+        <label>Data acquisto</label>
+        <input type="date" id="purchaseDate">
+      </div>
+    </div>
 
-  </main>
+    <label>Descrizione</label>
+    <textarea id="description" placeholder="Note opzionali"></textarea>
 
-  <footer>
-    © Gestionale Ristorante • GitHub Pages
-  </footer>
+    <button class="primary" id="savePurchase">
+      Salva acquisto
+    </button>
+  </section>
 
-  <script src="app.js"></script>
+  <!-- FILTRI -->
+  <section class="card soft">
+    <h2>Filtri</h2>
+
+    <div class="filters">
+      <select id="filterProduct"></select>
+      <select id="filterSupplier"></select>
+      <input type="date" id="dateFrom">
+      <input type="date" id="dateTo">
+      <select id="priceOrder">
+        <option value="">Ordina per prezzo</option>
+        <option value="asc">Dal più basso</option>
+        <option value="desc">Dal più alto</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- ARCHIVIO -->
+  <section class="card">
+    <h2>Archivio acquisti</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Prodotto</th>
+          <th>Fornitore</th>
+          <th>Prezzo</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </section>
+
+</main>
+
+<footer>
+  © Gestionale Ristorante – GitHub Pages
+</footer>
+
+<!-- TOAST -->
+<div id="toast" class="toast">
+  Acquisto aggiunto correttamente
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
