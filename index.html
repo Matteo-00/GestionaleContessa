@@ -5,13 +5,10 @@
   <title>Gestionale Ristorante</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- FONT -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
-  <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- XLSX -->
+  <!-- EXCEL -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -26,23 +23,20 @@
 
 <main>
 
+<!-- NUOVO ACQUISTO -->
 <section id="sectionNew" class="card">
   <h2>Nuovo acquisto</h2>
 
   <div class="grid">
     <div>
       <label>Prodotto</label>
-      <select id="productSelect">
-        <option value="">Seleziona prodotto</option>
-      </select>
+      <select id="productSelect"></select>
       <input id="newProduct" placeholder="Nuovo prodotto">
     </div>
 
     <div>
       <label>Fornitore</label>
-      <select id="supplierSelect">
-        <option value="">Seleziona fornitore</option>
-      </select>
+      <select id="supplierSelect"></select>
       <input id="newSupplier" placeholder="Nuovo fornitore">
     </div>
 
@@ -60,32 +54,41 @@
   <button class="primary" id="savePurchase">Salva acquisto</button>
 </section>
 
+<!-- ARCHIVIO -->
 <section id="sectionArchive" class="card hidden">
   <h2>Archivio acquisti</h2>
 
-  <!-- FILTRI -->
+  <!-- FILTRI (4 ESATTI) -->
   <div class="filters">
-    <div class="filter-group">
-      <select id="filterProduct">
-        <option value="">Tutti i prodotti</option>
-      </select>
 
-      <select id="filterSupplier">
-        <option value="">Tutti i fornitori</option>
-      </select>
+    <!-- 1 PRODOTTO -->
+    <select id="filterProduct"></select>
 
-      <input type="number" id="filterPrice" placeholder="Prezzo esatto €">
+    <!-- 2 FORNITORE -->
+    <select id="filterSupplier"></select>
 
-      <select id="filterOrder">
-        <option value="">Ordina</option>
-        <option value="priceAsc">Prezzo crescente</option>
-        <option value="priceDesc">Prezzo decrescente</option>
-        <option value="dateAsc">Data più vecchia</option>
-        <option value="dateDesc">Data più recente</option>
-      </select>
+    <!-- 3 PREZZO -->
+    <select id="filterPriceMode">
+      <option value="">Prezzo</option>
+      <option value="asc">Crescente</option>
+      <option value="desc">Decrescente</option>
+      <option value="exact">Prezzo esatto</option>
+    </select>
+    <input type="number" id="filterPriceExact" placeholder="€ esatto" class="hidden">
 
-      <input type="date" id="filterDate">
+    <!-- 4 DATA -->
+    <select id="filterDateMode">
+      <option value="">Data</option>
+      <option value="recent">Più recente</option>
+      <option value="old">Meno recente</option>
+      <option value="range">Intervallo date</option>
+    </select>
+
+    <div id="dateRange" class="hidden">
+      <input type="date" id="dateFrom">
+      <input type="date" id="dateTo">
     </div>
+
   </div>
 
   <table>
@@ -101,8 +104,8 @@
   </table>
 
   <div class="export">
-    <button class="secondary" id="exportExcel">📥 Esporta Excel</button>
-    <button class="secondary" id="exportPDF">📄 PDF</button>
+    <button id="exportExcel">📥 Excel</button>
+    <button id="exportPDF">📄 PDF</button>
   </div>
 </section>
 
