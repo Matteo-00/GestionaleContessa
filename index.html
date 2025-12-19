@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Gestionale Ristorante</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2f7d65">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -19,10 +20,12 @@
 <header class="topbar">
   <div class="logo">🍷 RistoManager</div>
   <nav>
-    <button data-page="new" class="active">Nuovo</button>
-    <button data-page="archive">Archivio</button>
-    <button data-page="stats">Statistiche</button>
-    <span class="indicator"></span>
+    <div class="nav-tabs" role="tablist" aria-label="Sezioni">
+      <button data-page="new" class="active" role="tab" aria-selected="true">Nuovo</button>
+      <button data-page="archive" role="tab">Archivio</button>
+      <button data-page="stats" role="tab">Statistiche</button>
+      <span class="indicator" aria-hidden="true"></span>
+    </div>
   </nav>
 </header>
 
@@ -36,13 +39,13 @@
     <div class="grid">
       <div>
         <label>Prodotto</label>
-        <select id="productSelect"></select>
+        <select id="productSelect" class="fixed-select"></select>
         <input id="newProduct" placeholder="Nuovo prodotto">
       </div>
 
       <div>
         <label>Fornitore</label>
-        <select id="supplierSelect"></select>
+        <select id="supplierSelect" class="fixed-select"></select>
         <input id="newSupplier" placeholder="Nuovo fornitore">
       </div>
 
@@ -68,8 +71,8 @@
 
     <!-- FILTRI -->
     <div class="filters">
-      <select id="filterProduct"></select>
-      <select id="filterSupplier"></select>
+      <select id="filterProduct" class="fixed-select"></select>
+      <select id="filterSupplier" class="fixed-select"></select>
 
       <select id="filterPriceMode">
         <option value="">Prezzo</option>
@@ -122,11 +125,13 @@
     <h2>Statistiche spese</h2>
 
     <div class="filters">
-      <select id="statsProduct"></select>
-      <select id="statsSupplier"></select>
+      <select id="statsProduct" class="fixed-select"></select>
+      <select id="statsSupplier" class="fixed-select"></select>
     </div>
 
-    <canvas id="statsChart" height="120"></canvas>
+    <div class="chart-wrap">
+      <canvas id="statsChart" height="120"></canvas>
+    </div>
   </div>
 </section>
 
