@@ -3,16 +3,38 @@ let products = JSON.parse(localStorage.getItem('products')) || [];
 let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
 
 /* NAV */
-document.querySelectorAll('nav button').forEach((btn,i)=>{
+const navButtons = document.querySelectorAll('nav button');
+const indicator = document.querySelector('.indicator');
+
+function updateIndicatorFor(btn){
+  // posiziona e scala l'indicatore in base al bottone attivo
+  const navRect = btn.parentElement.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  const offset = btnRect.left - navRect.left;
+  indicator.style.width = `${btnRect.width}px`;
+  indicator.style.transform = `translateX(${offset}px)`;
+}
+
+navButtons.forEach((btn,i)=>{
   btn.onclick=()=>{
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     document.getElementById('page-'+btn.dataset.page).classList.add('active');
-    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    navButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelector('.indicator').style.transform=`translateX(${i*80}px)`;
+    updateIndicatorFor(btn);
     renderArchive();
     renderStats();
-  }
+  };
+});
+
+// initialize indicator on load
+window.addEventListener('load',()=>{
+  const active = document.querySelector('nav button.active') || navButtons[0];
+  if(active) updateIndicatorFor(active);
+});
+window.addEventListener('resize',()=>{
+  const active = document.querySelector('nav button.active') || navButtons[0];
+  if(active) updateIndicatorFor(active);
 });
 
 /* SELECTS */
@@ -47,6 +69,8 @@ savePurchase.onclick=()=>{
   purchaseDate.value='';
   showToast();
   refreshSelects();
+  renderArchive();
+  renderStats();
 };
 
 /* ARCHIVIO + PAGINAZIONE */
@@ -68,8 +92,8 @@ function renderArchive(){
   if(filterDateMode.value==='range')
     data=data.filter(x=>x.date>=dateFrom.value&&x.date<=dateTo.value);
 
-  const pages=Math.ceil(data.length/perPage);
-  currentPage=Math.min(currentPage,pages)||1;
+  const pages=Math.max(1,Math.ceil(data.length/perPage));
+  currentPage=Math.min(Math.max(currentPage,1),pages);
 
   const start=(currentPage-1)*perPage;
   const slice=data.slice(start,start+perPage);
@@ -88,8 +112,20 @@ function renderArchive(){
   pageInfo.textContent=`Pagina ${currentPage} / ${pages}`;
 }
 
-prevPage.onclick=()=>{currentPage--;renderArchive();}
-nextPage.onclick=()=>{currentPage++;renderArchive();}
+prevPage.onclick=()=>{ currentPage=Math.max(1,currentPage-1); renderArchive(); }
+nextPage.onclick=()=>{ 
+  // calcola tot pagine in base ai filtri correnti
+  let data=[...purchases];
+  if(filterProduct.value)data=data.filter(x=>x.product===filterProduct.value);
+  if(filterSupplier.value)data=data.filter(x=>x.supplier===filterSupplier.value);
+  if(filterPriceMode.value==='exact'&&filterPriceExact.value)
+    data=data.filter(x=>x.price==filterPriceExact.value);
+  if(filterDateMode.value==='range')
+    data=data.filter(x=>x.date>=dateFrom.value&&x.date<=dateTo.value);
+  const pages=Math.max(1,Math.ceil(data.length/perPage));
+  currentPage=Math.min(pages,currentPage+1);
+  renderArchive();
+}
 
 /* STATISTICHE */
 let chart;
@@ -115,6 +151,13 @@ function renderStats(){
         data:values,
         backgroundColor:'#2f7d65'
       }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        y:{beginAtZero:true}
+      }
     }
   });
 }
