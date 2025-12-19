@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestionale Ristorante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <header class="glass">
+    <h1>📦 Gestionale Acquisti</h1>
+    <p>Controllo elegante dei costi del tuo ristorante</p>
+  </header>
+
+  <main>
+
+    <!-- NUOVO ACQUISTO -->
+    <section class="card">
+      <h2>➕ Nuovo Acquisto</h2>
+
+      <div class="grid">
+        <div>
+          <label>Prodotto</label>
+          <select id="productSelect"></select>
+          <input id="newProduct" placeholder="Nuovo prodotto">
+        </div>
+
+        <div>
+          <label>Fornitore</label>
+          <select id="supplierSelect"></select>
+          <input id="newSupplier" placeholder="Nuovo fornitore">
+        </div>
+
+        <div>
+          <label>Prezzo (€)</label>
+          <input type="number" id="price" step="0.01">
+        </div>
+      </div>
+
+      <label>Descrizione</label>
+      <textarea id="description" placeholder="Note sull'acquisto"></textarea>
+
+      <button onclick="addPurchase()">Salva acquisto</button>
+    </section>
+
+    <!-- FILTRI -->
+    <section class="card subtle">
+      <h2>🔍 Filtri avanzati</h2>
+
+      <div class="filters">
+        <select id="filterProduct"></select>
+        <select id="filterSupplier"></select>
+        <input type="date" id="filterDate">
+        <input type="number" id="filterPrice" placeholder="Prezzo max">
+      </div>
+    </section>
+
+    <!-- STORICO -->
+    <section class="card">
+      <h2>📊 Storico Acquisti</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Prodotto</th>
+            <th>Fornitore</th>
+            <th>Prezzo</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <footer>
+    © Gestionale Ristorante • GitHub Pages
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
