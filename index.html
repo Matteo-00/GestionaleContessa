@@ -5,7 +5,7 @@
   <title>Gestionale Ristorante</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Font -->
+  <!-- FONT -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
   <!-- CSS -->
@@ -65,16 +65,23 @@
   <section id="sectionArchive" class="card hidden">
     <h2>Archivio acquisti</h2>
 
-    <div class="grid archive-filters">
-      <input type="date" id="fromDate">
-      <input type="date" id="toDate">
-      <select id="priceOrder">
-        <option value="">Ordina per prezzo</option>
-        <option value="asc">Prezzo crescente</option>
-        <option value="desc">Prezzo decrescente</option>
-      </select>
-      <button class="secondary" id="exportExcel">📤 Excel</button>
-      <button class="secondary" id="exportPDF">📄 PDF</button>
+    <div class="filters">
+      <h3>Filtri avanzati</h3>
+
+      <div class="filter-group">
+        <select id="filterProduct">
+          <option value="">Tutti i prodotti</option>
+        </select>
+
+        <select id="filterSupplier">
+          <option value="">Tutti i fornitori</option>
+        </select>
+
+        <input type="number" id="filterPrice" placeholder="Prezzo esatto €">
+
+        <input type="date" id="fromDate">
+        <input type="date" id="toDate">
+      </div>
     </div>
 
     <table>
@@ -88,6 +95,11 @@
       </thead>
       <tbody id="archiveTable"></tbody>
     </table>
+
+    <div class="export">
+      <button class="secondary" id="exportExcel">📤 Excel</button>
+      <button class="secondary" id="exportPDF">📄 PDF</button>
+    </div>
   </section>
 
 </main>
