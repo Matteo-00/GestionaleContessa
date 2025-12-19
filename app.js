@@ -1,9 +1,10 @@
+let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
 let products = JSON.parse(localStorage.getItem('products')) || [];
 let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
-let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
 
-btnNew.onclick = ()=>switchView('new');
-btnArchive.onclick = ()=>switchView('archive');
+/* NAV */
+btnNew.onclick = () => switchView('new');
+btnArchive.onclick = () => switchView('archive');
 
 function switchView(v){
   sectionNew.classList.toggle('hidden',v!=='new');
@@ -13,12 +14,12 @@ function switchView(v){
   renderArchive();
 }
 
-/* SELECT */
+/* SELECT DINAMICI */
 function refreshSelects(){
-  productSelect.innerHTML='<option value="">Seleziona prodotto</option>';
-  supplierSelect.innerHTML='<option value="">Seleziona fornitore</option>';
-  filterProduct.innerHTML='<option value="">Tutti i prodotti</option>';
-  filterSupplier.innerHTML='<option value="">Tutti i fornitori</option>';
+  productSelect.innerHTML='<option value="">Prodotto</option>';
+  supplierSelect.innerHTML='<option value="">Fornitore</option>';
+  filterProduct.innerHTML='<option value="">Prodotto</option>';
+  filterSupplier.innerHTML='<option value="">Fornitore</option>';
 
   products.forEach(p=>{
     productSelect.innerHTML+=`<option>${p}</option>`;
@@ -31,31 +32,43 @@ function refreshSelects(){
   });
 }
 
-/* SAVE */
-savePurchase.onclick=()=>{
-  const p=newProduct.value||productSelect.value;
-  const s=newSupplier.value||supplierSelect.value;
+/* SALVA ACQUISTO */
+savePurchase.onclick = ()=>{
+  const product = newProduct.value || productSelect.value;
+  const supplier = newSupplier.value || supplierSelect.value;
 
-  if(p&&!products.includes(p))products.push(p);
-  if(s&&!suppliers.includes(s))suppliers.push(s);
+  if(!product || !supplier || !price.value || !purchaseDate.value) return;
+
+  if(!products.includes(product)) products.push(product);
+  if(!suppliers.includes(supplier)) suppliers.push(supplier);
 
   purchases.push({
-    date:purchaseDate.value,
-    product:p,
-    supplier:s,
-    price:+price.value
+    product,
+    supplier,
+    price:+price.value,
+    date:purchaseDate.value
   });
 
+  localStorage.setItem('purchases',JSON.stringify(purchases));
   localStorage.setItem('products',JSON.stringify(products));
   localStorage.setItem('suppliers',JSON.stringify(suppliers));
-  localStorage.setItem('purchases',JSON.stringify(purchases));
 
   newProduct.value=newSupplier.value=price.value='';
-  refreshSelects();
+  purchaseDate.value='';
   showToast();
+  refreshSelects();
 };
 
-/* ARCHIVIO + FILTRI */
+/* UI FILTRI DINAMICI */
+filterPriceMode.onchange = ()=>{
+  filterPriceExact.classList.toggle('hidden',filterPriceMode.value!=='exact');
+};
+
+filterDateMode.onchange = ()=>{
+  dateRange.classList.toggle('hidden',filterDateMode.value!=='range');
+};
+
+/* ARCHIVIO */
 function renderArchive(){
   let data=[...purchases];
 
@@ -65,20 +78,23 @@ function renderArchive(){
   if(filterSupplier.value)
     data=data.filter(x=>x.supplier===filterSupplier.value);
 
-  if(filterPrice.value)
-    data=data.filter(x=>x.price==filterPrice.value);
+  if(filterPriceMode.value==='exact' && filterPriceExact.value)
+    data=data.filter(x=>x.price==filterPriceExact.value);
 
-  if(filterDate.value)
-    data=data.filter(x=>x.date===filterDate.value);
-
-  if(filterOrder.value==='priceAsc')
+  if(filterPriceMode.value==='asc')
     data.sort((a,b)=>a.price-b.price);
-  if(filterOrder.value==='priceDesc')
+
+  if(filterPriceMode.value==='desc')
     data.sort((a,b)=>b.price-a.price);
-  if(filterOrder.value==='dateAsc')
-    data.sort((a,b)=>a.date.localeCompare(b.date));
-  if(filterOrder.value==='dateDesc')
+
+  if(filterDateMode.value==='recent')
     data.sort((a,b)=>b.date.localeCompare(a.date));
+
+  if(filterDateMode.value==='old')
+    data.sort((a,b)=>a.date.localeCompare(b.date));
+
+  if(filterDateMode.value==='range')
+    data=data.filter(x=>x.date>=dateFrom.value && x.date<=dateTo.value);
 
   archiveTable.innerHTML='';
   data.forEach(x=>{
@@ -90,33 +106,27 @@ function renderArchive(){
         <td>${x.price.toFixed(2)}</td>
       </tr>`;
   });
-
-  highlightFilters();
 }
 
-/* FILTRI ATTIVI */
-function highlightFilters(){
-  [filterProduct,filterSupplier,filterPrice,filterDate,filterOrder]
-    .forEach(f=>f.classList.toggle('filter-active',f.value));
-}
-
-/* EXPORT EXCEL VERO */
-exportExcel.onclick=()=>{
-  const ws=XLSX.utils.json_to_sheet(purchases);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Acquisti');
-  XLSX.writeFile(wb,'archivio_acquisti.xlsx');
+/* EXPORT EXCEL */
+exportExcel.onclick = ()=>{
+  const ws = XLSX.utils.json_to_sheet(purchases);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Acquisti');
+  XLSX.writeFile(wb, 'archivio_acquisti.xlsx');
 };
 
-exportPDF.onclick=()=>window.print();
+exportPDF.onclick = ()=>window.print();
 
-[filterProduct,filterSupplier,filterPrice,filterDate,filterOrder]
-  .forEach(f=>f.addEventListener('change',renderArchive));
+/* EVENTI */
+document.querySelectorAll('select,input')
+  .forEach(el=>el.addEventListener('change',renderArchive));
 
 function showToast(){
   toast.classList.add('show');
   setTimeout(()=>toast.classList.remove('show'),2000);
 }
 
+/* INIT */
 refreshSelects();
 renderArchive();
