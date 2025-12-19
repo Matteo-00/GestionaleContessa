@@ -2,142 +2,121 @@ let products = JSON.parse(localStorage.getItem('products')) || [];
 let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
 let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
 
-/* ELEMENTI */
-const sectionNew = document.getElementById('sectionNew');
-const sectionArchive = document.getElementById('sectionArchive');
-const btnNew = document.getElementById('btnNew');
-const btnArchive = document.getElementById('btnArchive');
-const toast = document.getElementById('toast');
+btnNew.onclick = ()=>switchView('new');
+btnArchive.onclick = ()=>switchView('archive');
 
-/* NAV */
-btnNew.onclick = () => switchView('new');
-btnArchive.onclick = () => switchView('archive');
-
-function switchView(view){
-  sectionNew.classList.toggle('hidden', view !== 'new');
-  sectionArchive.classList.toggle('hidden', view !== 'archive');
-  btnNew.classList.toggle('active', view === 'new');
-  btnArchive.classList.toggle('active', view === 'archive');
+function switchView(v){
+  sectionNew.classList.toggle('hidden',v!=='new');
+  sectionArchive.classList.toggle('hidden',v!=='archive');
+  btnNew.classList.toggle('active',v==='new');
+  btnArchive.classList.toggle('active',v==='archive');
   renderArchive();
 }
 
-/* SELECT DINAMICI */
+/* SELECT */
 function refreshSelects(){
-  productSelect.innerHTML = '<option value="">Seleziona prodotto</option>';
-  supplierSelect.innerHTML = '<option value="">Seleziona fornitore</option>';
-  filterProduct.innerHTML = '<option value="">Tutti i prodotti</option>';
-  filterSupplier.innerHTML = '<option value="">Tutti i fornitori</option>';
+  productSelect.innerHTML='<option value="">Seleziona prodotto</option>';
+  supplierSelect.innerHTML='<option value="">Seleziona fornitore</option>';
+  filterProduct.innerHTML='<option value="">Tutti i prodotti</option>';
+  filterSupplier.innerHTML='<option value="">Tutti i fornitori</option>';
 
   products.forEach(p=>{
-    productSelect.innerHTML += `<option>${p}</option>`;
-    filterProduct.innerHTML += `<option>${p}</option>`;
+    productSelect.innerHTML+=`<option>${p}</option>`;
+    filterProduct.innerHTML+=`<option>${p}</option>`;
   });
 
   suppliers.forEach(s=>{
-    supplierSelect.innerHTML += `<option>${s}</option>`;
-    filterSupplier.innerHTML += `<option>${s}</option>`;
+    supplierSelect.innerHTML+=`<option>${s}</option>`;
+    filterSupplier.innerHTML+=`<option>${s}</option>`;
   });
 }
 
-/* UX nuovi campi */
-newProduct.oninput = () => newProduct.classList.toggle('new', newProduct.value);
-newSupplier.oninput = () => newSupplier.classList.toggle('new', newSupplier.value);
+/* SAVE */
+savePurchase.onclick=()=>{
+  const p=newProduct.value||productSelect.value;
+  const s=newSupplier.value||supplierSelect.value;
 
-/* SALVATAGGIO */
-savePurchase.onclick = () => {
-  const np = newProduct.value.trim();
-  const ns = newSupplier.value.trim();
-
-  if(np && !products.includes(np)) products.push(np);
-  if(ns && !suppliers.includes(ns)) suppliers.push(ns);
+  if(p&&!products.includes(p))products.push(p);
+  if(s&&!suppliers.includes(s))suppliers.push(s);
 
   purchases.push({
-    date: purchaseDate.value,
-    product: np || productSelect.value,
-    supplier: ns || supplierSelect.value,
-    price: parseFloat(price.value)
+    date:purchaseDate.value,
+    product:p,
+    supplier:s,
+    price:+price.value
   });
 
-  localStorage.setItem('products', JSON.stringify(products));
-  localStorage.setItem('suppliers', JSON.stringify(suppliers));
-  localStorage.setItem('purchases', JSON.stringify(purchases));
+  localStorage.setItem('products',JSON.stringify(products));
+  localStorage.setItem('suppliers',JSON.stringify(suppliers));
+  localStorage.setItem('purchases',JSON.stringify(purchases));
 
-  newProduct.value = '';
-  newSupplier.value = '';
-  price.value = '';
-  description.value = '';
-  newProduct.classList.remove('new');
-  newSupplier.classList.remove('new');
-
+  newProduct.value=newSupplier.value=price.value='';
   refreshSelects();
   showToast();
 };
 
 /* ARCHIVIO + FILTRI */
 function renderArchive(){
-  archiveTable.innerHTML = '';
-  let data = [...purchases];
+  let data=[...purchases];
 
   if(filterProduct.value)
-    data = data.filter(p => p.product === filterProduct.value);
+    data=data.filter(x=>x.product===filterProduct.value);
 
   if(filterSupplier.value)
-    data = data.filter(p => p.supplier === filterSupplier.value);
+    data=data.filter(x=>x.supplier===filterSupplier.value);
 
   if(filterPrice.value)
-    data = data.filter(p => p.price == filterPrice.value);
+    data=data.filter(x=>x.price==filterPrice.value);
 
-  if(fromDate.value)
-    data = data.filter(p => p.date >= fromDate.value);
+  if(filterDate.value)
+    data=data.filter(x=>x.date===filterDate.value);
 
-  if(toDate.value)
-    data = data.filter(p => p.date <= toDate.value);
+  if(filterOrder.value==='priceAsc')
+    data.sort((a,b)=>a.price-b.price);
+  if(filterOrder.value==='priceDesc')
+    data.sort((a,b)=>b.price-a.price);
+  if(filterOrder.value==='dateAsc')
+    data.sort((a,b)=>a.date.localeCompare(b.date));
+  if(filterOrder.value==='dateDesc')
+    data.sort((a,b)=>b.date.localeCompare(a.date));
 
-  data.forEach(p=>{
-    archiveTable.innerHTML += `
+  archiveTable.innerHTML='';
+  data.forEach(x=>{
+    archiveTable.innerHTML+=`
       <tr>
-        <td>${p.date}</td>
-        <td>${p.product}</td>
-        <td>${p.supplier}</td>
-        <td>€ ${p.price.toFixed(2)}</td>
+        <td>${x.date}</td>
+        <td>${x.product}</td>
+        <td>${x.supplier}</td>
+        <td>${x.price.toFixed(2)}</td>
       </tr>`;
   });
 
   highlightFilters();
 }
 
-/* EVIDENZIA FILTRI ATTIVI */
+/* FILTRI ATTIVI */
 function highlightFilters(){
-  [filterProduct, filterSupplier, filterPrice, fromDate, toDate].forEach(el=>{
-    el.classList.toggle('filter-active', el.value);
-  });
+  [filterProduct,filterSupplier,filterPrice,filterDate,filterOrder]
+    .forEach(f=>f.classList.toggle('filter-active',f.value));
 }
 
-/* EXPORT */
-exportExcel.onclick = () => {
-  let csv = 'Data,Prodotto,Fornitore,Prezzo\n';
-  purchases.forEach(p=>{
-    csv += `${p.date},${p.product},${p.supplier},${p.price}\n`;
-  });
-
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-  a.download = 'archivio_acquisti.csv';
-  a.click();
+/* EXPORT EXCEL VERO */
+exportExcel.onclick=()=>{
+  const ws=XLSX.utils.json_to_sheet(purchases);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Acquisti');
+  XLSX.writeFile(wb,'archivio_acquisti.xlsx');
 };
 
-exportPDF.onclick = () => window.print();
+exportPDF.onclick=()=>window.print();
 
-/* EVENTI FILTRI */
-[filterProduct, filterSupplier, filterPrice, fromDate, toDate]
-  .forEach(el => el.addEventListener('change', renderArchive));
+[filterProduct,filterSupplier,filterPrice,filterDate,filterOrder]
+  .forEach(f=>f.addEventListener('change',renderArchive));
 
-/* TOAST */
 function showToast(){
   toast.classList.add('show');
   setTimeout(()=>toast.classList.remove('show'),2000);
 }
 
-/* INIT */
 refreshSelects();
 renderArchive();
