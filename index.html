@@ -1,3 +1,8 @@
+<!-- DIALOG DETTAGLI PRODOTTO -->
+<dialog id="productDialog" class="product-dialog">
+  <div id="productDialogContent"></div>
+  <button id="closeProductDialog" class="primary" style="margin-top:1.2rem;">Chiudi</button>
+</dialog>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -7,7 +12,7 @@
   <meta name="theme-color" content="#2f7d65">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/style.css">
 
   <!-- Chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,7 +23,10 @@
 <body>
 
 <header class="topbar">
-  <div class="logo">🍷 RistoManager</div>
+  <div style="display:flex;align-items:center;gap:1.2rem;width:100%;">
+    <img src="assets/Screenshot 2026-01-04 223215.png" alt="Logo Contessa" class="logo" style="height:60px;object-fit:contain;" />
+    <span class="gestionale-deco">Gestionale</span>
+  </div>
   <nav>
     <div class="nav-tabs" role="tablist" aria-label="Sezioni">
       <button data-page="new" class="active" role="tab" aria-selected="true">Nuovo</button>
@@ -33,34 +41,68 @@
 
 <!-- NUOVO ACQUISTO -->
 <section id="page-new" class="page active">
-  <div class="card">
-    <h2>Nuovo acquisto</h2>
-
-    <div class="grid">
-      <div>
-        <label>Prodotto</label>
-        <select id="productSelect" class="fixed-select"></select>
-        <input id="newProduct" placeholder="Nuovo prodotto">
+  <div class="card card-flex vertical-flex">
+    <div class="new-main-flex wide-forms">
+      <!-- PARAGRAFO 1: Ricerca prodotto -->
+      <div class="search-section big-tile wide-tile">
+        <div class="form-header">
+          <span class="form-icon">🔎</span>
+          <h2>Trova il tuo prodotto</h2>
+        </div>
+        <p class="subtitle">Cerca rapidamente tra i prodotti già inseriti.</p>
+        <label for="searchProduct">Cerca prodotto</label>
+        <input id="searchProduct" class="search-bar" type="text" placeholder="Cerca prodotto...">
+        <ul id="searchResults" class="search-results"></ul>
+        <div id="productDetails" class="product-details" style="display:none;"></div>
       </div>
 
-      <div>
-        <label>Fornitore</label>
-        <select id="supplierSelect" class="fixed-select"></select>
-        <input id="newSupplier" placeholder="Nuovo fornitore">
-      </div>
-
-      <div>
-        <label>Prezzo (€)</label>
-        <input type="number" id="price" step="0.01">
-      </div>
-
-      <div>
-        <label>Data</label>
-        <input type="date" id="purchaseDate">
+      <!-- PARAGRAFO 2: Nuovo prodotto -->
+      <div class="add-section big-tile wide-tile">
+        <div class="form-header">
+          <span class="form-icon">📝</span>
+          <h2>Aggiungi un nuovo prodotto</h2>
+        </div>
+        <p class="subtitle">Compila i dati per registrare un nuovo acquisto.</p>
+        <div class="grid">
+          <div>
+            <label for="productSelect">Prodotto</label>
+            <select id="productSelect" class="fixed-select"></select>
+            <label for="newProduct" style="margin-top:0.5rem;">Nuovo prodotto</label>
+            <input id="newProduct" placeholder="Nuovo prodotto">
+          </div>
+          <div>
+            <label for="supplierSelect">Fornitore</label>
+            <select id="supplierSelect" class="fixed-select"></select>
+            <label for="newSupplier" style="margin-top:0.5rem;">Nuovo fornitore</label>
+            <input id="newSupplier" placeholder="Nuovo fornitore">
+          </div>
+          <div>
+            <label for="price">Prezzo (€)</label>
+            <input type="number" id="price" step="0.01">
+          </div>
+          <div>
+            <label for="purchaseDate">Data</label>
+            <input type="date" id="purchaseDate">
+          </div>
+          <div>
+            <label for="description">Descrizione</label>
+            <input id="description" placeholder="Descrizione prodotto o nota">
+          </div>
+        </div>
+        <button class="primary" id="savePurchase">Salva acquisto</button>
       </div>
     </div>
-
-    <button class="primary" id="savePurchase">Salva acquisto</button>
+    <!-- PARAGRAFO 3: Info IA Fattura SOTTO -->
+    <div class="info-section ia-tile wide-tile" style="margin-top: -5px;max-width:100%;width:100%;align-self:stretch;">
+      <div class="info-header">
+        <span class="info-icon">&#9432;</span>
+        <span class="info-title">Fotografa la tua fattura</span>
+      </div>
+      <p class="info-desc">Solo da telefono: scatta una foto alla fattura e lascia che l'intelligenza artificiale estragga i dati per te!</p>
+      <button class="ia-btn" id="scanInvoiceBtn">
+        <span class="ia-btn-icon">📷</span> Estrai dati da foto
+      </button>
+    </div>
   </div>
 </section>
 
@@ -101,6 +143,7 @@
           <th>Prodotto</th>
           <th>Fornitore</th>
           <th>Prezzo</th>
+          <th>Descrizione</th>
         </tr>
       </thead>
       <tbody id="archiveTable"></tbody>
@@ -138,11 +181,12 @@
 </main>
 
 <footer>
-  <p>© Gestionale Ristorante • Design moderno & funzionale</p>
+  <p>© Gestionale ristorante "La Contessa"</p>
 </footer>
 
 <div id="toast">Acquisto salvato</div>
 
-<script src="app.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
+
