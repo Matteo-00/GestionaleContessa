@@ -102,6 +102,22 @@
             <label for="description">Note</label>
             <input id="description" placeholder="Descrizione...">
           </div>
+          <div>
+            <label for="rating">Qualità prodotto</label>
+            <div id="ratingStars" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.3rem;cursor:pointer;">
+              <span class="star" data-value="0.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="1" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="1.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="2" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="2.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="3" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="3.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="4" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="4.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <span class="star" data-value="5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+              <input type="hidden" id="rating" value="0">
+            </div>
+          </div>
         </div>
         <button class="primary" id="savePurchase">Salva</button>
       </div>
@@ -154,12 +170,14 @@
     <table>
       <thead>
         <tr>
+          <th>🕐</th>
           <th>Data</th>
           <th>Prodotto</th>
           <th>Fornitore</th>
           <th>Prezzo</th>
           <th>Quantità</th>
           <th>Unità</th>
+          <th>Qualità</th>
           <th>Descrizione</th>
           <th>Azioni</th>
         </tr>
@@ -210,6 +228,86 @@
 <dialog id="productDialog" class="product-dialog">
   <div id="productDialogContent"></div>
   <button id="closeProductDialog" class="primary" style="margin-top:1.2rem;">Chiudi</button>
+</dialog>
+
+<!-- DIALOG RIACQUISTO PRODOTTO -->
+<dialog id="repurchaseDialog" class="product-dialog">
+  <h2 style="margin-top:0;">Riacquista Prodotto</h2>
+  <div id="repurchaseContent" style="margin:1rem 0;"></div>
+  <div style="display:grid;gap:0.8rem;margin:1rem 0;">
+    <div>
+      <label for="repurchaseQuantity">Quantità</label>
+      <input type="number" id="repurchaseQuantity" step="0.01" placeholder="0.00">
+    </div>
+    <div>
+      <label for="repurchasePrice">Prezzo (€)</label>
+      <input type="number" id="repurchasePrice" step="0.01" placeholder="0.00">
+      <div id="lastPriceInfo" style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <button id="saveRepurchase" class="primary" style="flex:1;">Salva Riacquisto</button>
+    <button id="closeRepurchaseDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
+  </div>
+</dialog>
+
+<!-- DIALOG MODIFICA PRODOTTO -->
+<dialog id="editDialog" class="product-dialog">
+  <h2 style="margin-top:0;">Modifica Prodotto</h2>
+  <div style="display:grid;gap:0.8rem;margin:1rem 0;">
+    <div>
+      <label for="editProduct">Prodotto</label>
+      <input type="text" id="editProduct">
+    </div>
+    <div>
+      <label for="editSupplier">Fornitore</label>
+      <input type="text" id="editSupplier">
+    </div>
+    <div>
+      <label for="editPrice">Prezzo (€)</label>
+      <input type="number" id="editPrice" step="0.01">
+    </div>
+    <div>
+      <label for="editQuantity">Quantità</label>
+      <input type="number" id="editQuantity" step="0.01">
+    </div>
+    <div>
+      <label for="editUnit">Unità</label>
+      <select id="editUnit">
+        <option value="kg">Kg</option>
+        <option value="litri">Litro/i</option>
+        <option value="pezzi">Pezzo/i</option>
+      </select>
+    </div>
+    <div>
+      <label for="editDate">Data</label>
+      <input type="date" id="editDate">
+    </div>
+    <div>
+      <label for="editDescription">Note</label>
+      <input type="text" id="editDescription">
+    </div>
+    <div>
+      <label for="editRating">Qualità prodotto</label>
+      <div id="editRatingStars" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.3rem;cursor:pointer;">
+        <span class="edit-star" data-value="0.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="1" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="1.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="2" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="2.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="3" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="3.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="4" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="4.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="edit-star" data-value="5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <input type="hidden" id="editRating" value="0">
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <button id="saveEdit" class="primary" style="flex:1;">Salva Modifiche</button>
+    <button id="closeEditDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
+  </div>
 </dialog>
 
 <div id="toast">Salvato</div>
