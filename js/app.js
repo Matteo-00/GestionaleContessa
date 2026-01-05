@@ -4,15 +4,18 @@ let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
 
 /* NAV */
 const navButtons = document.querySelectorAll('nav button');
-const indicator = document.querySelector('.indicator');
 
-function updateIndicatorFor(btn){
-  // posiziona e scala l'indicatore in base al bottone attivo
-  const navRect = btn.parentElement.getBoundingClientRect();
-  const btnRect = btn.getBoundingClientRect();
-  const offset = btnRect.left - navRect.left;
-  indicator.style.width = `${btnRect.width}px`;
-  indicator.style.transform = `translateX(${offset}px)`;
+navButtons.forEach((btn,i)=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+btn.dataset.page).classList.add('active');
+    navButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderArchive();
+    renderStats();
+  };
+});
+
 // --- Ricerca prodotto in tempo reale ---
 const searchProduct = document.getElementById('searchProduct');
 const searchResults = document.getElementById('searchResults');
@@ -32,202 +35,28 @@ function renderProductSearchResults(query) {
     const li = document.createElement('li');
     li.textContent = prod;
     li.onclick = () => {
-      // Seleziona il prodotto nei campi sottostanti
-      productSelect.value = prod;
-      searchProduct.value = prod;
+      // Vai alla pagina archivio
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById('page-archive').classList.add('active');
+      navButtons.forEach(b=>b.classList.remove('active'));
+      document.querySelector('nav button[data-page="archive"]').classList.add('active');
+      
+      // Filtra per il prodotto selezionato
+      filterProduct.value = prod;
+      
+      // Pulisci la ricerca
+      searchProduct.value = '';
       searchResults.innerHTML = '';
-      productSelect.scrollIntoView({behavior:'smooth', block:'center'});
-
-            // Mostra dettagli prodotto in dialog come tabella
-            let acquisti = purchases.filter(x => x.product === prod);
-            const dialog = document.getElementById('productDialog');
-            const dialogContent = document.getElementById('productDialogContent');
-            if (acquisti.length > 0) {
-              // Filtro/ordinamento UI avanzato
-              let filterUI = `<div style="display:flex;gap:1.2em;align-items:center;justify-content:flex-start;margin-bottom:1.1em;flex-wrap:wrap;">
-                  <button class="filterBtn" id="sortRecent">Ultimo acquisto</button>
-                  <button class="filterBtn" id="sortSupplierAZ">Fornitore A-Z</button>
-                  <button class="filterBtn" id="sortSupplierZA">Fornitore Z-A</button>
-                  <button class="filterBtn" id="sortPriceLow">Prezzo più basso</button>
-                  <button class="filterBtn" id="sortPriceHigh">Prezzo più alto</button>
-                </div>`;
-              function renderTable(acqList) {
-                let table = `<table style="margin:0 auto 0 auto;font-size:1rem;min-width:520px;max-width:99%;box-shadow:0 4px 24px #2f7d6530,0 1.5px 8px #eab30812;border-radius:16px;overflow:hidden;background:#fff;border-collapse:separate;border-spacing:0;border:2.5px solid #2f7d65;">
-                  <thead style='background:linear-gradient(90deg,#eafaf3 60%,#fffbe7 100%);'>
-                    <tr>
-                      <th style='padding:0.7em 1.2em;text-align:left;font-size:1.05em;'>Prodotto</th>
-                      <th style='padding:0.7em 1.2em;text-align:left;font-size:1.05em;'>Fornitore</th>
-                      <th style='padding:0.7em 1.2em;text-align:left;font-size:1.05em;'>Prezzo</th>
-                      <th style='padding:0.7em 1.2em;text-align:left;font-size:1.05em;'>Data</th>
-                      <th style='padding:0.7em 1.2em;text-align:center;font-size:1.05em;'>Azioni</th>
-                    </tr>
-                  </thead><tbody>`;
-                acqList.forEach((acq, idx) => {
-                  table += `<tr style="border-bottom:1.5px solid #eafaf3;">
-                    <td style='padding:0.6em 1.2em;'>${acq.product}</td>
-                    <td style='padding:0.6em 1.2em;'>${acq.supplier}</td>
-                    <td style='padding:0.6em 1.2em;'>€ ${acq.price.toFixed(2)}</td>
-                    <td style='padding:0.6em 1.2em;'>${acq.date}</td>
-                    <td style='padding:0.6em 1.2em;text-align:center;'><button class="primary gotoArchiveBtn" data-idx="${idx}" style="padding:0.4em 0.9em;font-size:0.95em;">Vedi in archivio</button></td>
-                  </tr>`;
-                });
-                table += '</tbody></table>';
-                return table;
-              }
-              // Stato filtri
-              let filterState = {
-                sortRecent: false,
-                sortSupplierAZ: false,
-                sortSupplierZA: false,
-                sortPriceLow: false,
-                sortPriceHigh: false
-              };
-
-              function applyFilters() {
-                let filtered = [...acquisti];
-                // Ultimo acquisto
-                if (filterState.sortRecent) {
-                  if (filtered.length > 0) {
-                    let maxDate = filtered.reduce((max, x) => x.date > max ? x.date : max, filtered[0].date);
-                    filtered = filtered.filter(x => x.date === maxDate);
-                  }
-                }
-                // Fornitore A-Z
-                if (filterState.sortSupplierAZ) {
-                  filtered.sort((a, b) => a.supplier.localeCompare(b.supplier));
-                }
-                // Fornitore Z-A
-                if (filterState.sortSupplierZA) {
-                  filtered.sort((a, b) => b.supplier.localeCompare(a.supplier));
-                }
-                // Prezzo più basso
-                if (filterState.sortPriceLow) {
-                  filtered.sort((a, b) => a.price - b.price);
-                }
-                // Prezzo più alto
-                if (filterState.sortPriceHigh) {
-                  filtered.sort((a, b) => b.price - a.price);
-                }
-                dialogContent.innerHTML = filterUI + renderTable(filtered);
-                setTimeout(setupFilterEvents, 10);
-                setTimeout(setupArchiveBtns, 10);
-              }
-
-              function updateFilterBtnStyles() {
-                Object.keys(filterState).forEach(key => {
-                  const btn = dialogContent.querySelector(`#${key}`);
-                  if (btn) {
-                    if (filterState[key]) {
-                      btn.style.background = 'linear-gradient(90deg,#ffe066 60%,#fffbe7 100%)';
-                      btn.style.color = '#2f7d65';
-                      btn.style.borderColor = '#eab308';
-                    } else {
-                      btn.style.background = '#f7f7f9';
-                      btn.style.color = '#222';
-                      btn.style.borderColor = '#2f7d65';
-                    }
-                  }
-                });
-              }
-
-              function setupFilterEvents() {
-                // Ultimo acquisto
-                dialogContent.querySelector('#sortRecent').onclick = () => {
-                  filterState.sortRecent = !filterState.sortRecent;
-                  applyFilters();
-                  updateFilterBtnStyles();
-                };
-                // Fornitore A-Z
-                dialogContent.querySelector('#sortSupplierAZ').onclick = () => {
-                  if (!filterState.sortSupplierAZ) {
-                    filterState.sortSupplierAZ = true;
-                    filterState.sortSupplierZA = false;
-                  } else {
-                    filterState.sortSupplierAZ = false;
-                  }
-                  applyFilters();
-                  updateFilterBtnStyles();
-                };
-                // Fornitore Z-A
-                dialogContent.querySelector('#sortSupplierZA').onclick = () => {
-                  if (!filterState.sortSupplierZA) {
-                    filterState.sortSupplierZA = true;
-                    filterState.sortSupplierAZ = false;
-                  } else {
-                    filterState.sortSupplierZA = false;
-                  }
-                  applyFilters();
-                  updateFilterBtnStyles();
-                };
-                // Prezzo più basso
-                dialogContent.querySelector('#sortPriceLow').onclick = () => {
-                  if (!filterState.sortPriceLow) {
-                    filterState.sortPriceLow = true;
-                    filterState.sortPriceHigh = false;
-                  } else {
-                    filterState.sortPriceLow = false;
-                  }
-                  applyFilters();
-                  updateFilterBtnStyles();
-                };
-                // Prezzo più alto
-                dialogContent.querySelector('#sortPriceHigh').onclick = () => {
-                  if (!filterState.sortPriceHigh) {
-                    filterState.sortPriceHigh = true;
-                    filterState.sortPriceLow = false;
-                  } else {
-                    filterState.sortPriceHigh = false;
-                  }
-                  applyFilters();
-                  updateFilterBtnStyles();
-                };
-                updateFilterBtnStyles();
-              }
-
-              function setupArchiveBtns() {
-                dialogContent.querySelectorAll('.gotoArchiveBtn').forEach(btn => {
-                  btn.onclick = () => {
-                    const acq = acquisti[btn.getAttribute('data-idx')];
-                    dialog.close();
-                    document.querySelector('nav button[data-page="archive"]').click();
-                    filterProduct.value = acq.product;
-                    renderArchive(acq.product);
-                    setTimeout(() => {
-                      const rows = archiveTable.querySelectorAll('tr');
-                      rows.forEach(row => {
-                        if (
-                          row.children[1] && row.children[1].textContent === acq.product &&
-                          row.children[2] && row.children[2].textContent === acq.supplier &&
-                          row.children[3] && row.children[3].textContent.replace('€ ','') === acq.price.toFixed(2)
-                        ) {
-                          row.style.background = 'linear-gradient(90deg,#ffe066 60%,#fffbe7 100%)';
-                          row.scrollIntoView({behavior:'smooth', block:'center'});
-                        } else {
-                          row.style.background = '';
-                        }
-                      });
-                    }, 100);
-                  };
-                });
-              }
-
-              applyFilters();
-            } else {
-              dialogContent.innerHTML = '<div style="margin:1.2rem 0;color:var(--muted);">Nessun acquisto registrato per questo prodotto.</div>';
-              dialog.showModal();
-            }
+      
+      // Renderizza l'archivio con il filtro
+      currentPage = 1; // Reset alla prima pagina
+      renderArchive();
+      
+      // Scroll verso l'alto dell'archivio
+      document.getElementById('page-archive').scrollIntoView({behavior:'smooth', block:'start'});
     };
     searchResults.appendChild(li);
   });
-// Gestione chiusura dialog prodotto
-const productDialog = document.getElementById('productDialog');
-const closeProductDialog = document.getElementById('closeProductDialog');
-if (productDialog && closeProductDialog) {
-  closeProductDialog.onclick = () => productDialog.close();
-  productDialog.addEventListener('click', (e) => {
-    if (e.target === productDialog) productDialog.close();
-  });
-}
 }
 
 if (searchProduct) {
@@ -241,31 +70,32 @@ if (searchProduct) {
     }
   });
 }
-}
-
-navButtons.forEach((btn,i)=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.getElementById('page-'+btn.dataset.page).classList.add('active');
-    navButtons.forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    updateIndicatorFor(btn);
-    renderArchive();
-    renderStats();
-  };
-});
-
-// initialize indicator on load
-window.addEventListener('load',()=>{
-  const active = document.querySelector('nav button.active') || navButtons[0];
-  if(active) updateIndicatorFor(active);
-});
-window.addEventListener('resize',()=>{
-  const active = document.querySelector('nav button.active') || navButtons[0];
-  if(active) updateIndicatorFor(active);
-});
 
 /* SELECTS */
+const productSelect = document.getElementById('productSelect');
+const supplierSelect = document.getElementById('supplierSelect');
+const filterProduct = document.getElementById('filterProduct');
+const filterSupplier = document.getElementById('filterSupplier');
+const statsProduct = document.getElementById('statsProduct');
+const statsSupplier = document.getElementById('statsSupplier');
+const savePurchase = document.getElementById('savePurchase');
+const newProduct = document.getElementById('newProduct');
+const newSupplier = document.getElementById('newSupplier');
+const price = document.getElementById('price');
+const quantity = document.getElementById('quantity');
+const unit = document.getElementById('unit');
+const purchaseDate = document.getElementById('purchaseDate');
+const description = document.getElementById('description');
+const archiveTable = document.getElementById('archiveTable');
+const filterPriceMode = document.getElementById('filterPriceMode');
+const filterPriceExact = document.getElementById('filterPriceExact');
+const filterDateMode = document.getElementById('filterDateMode');
+const dateFrom = document.getElementById('dateFrom');
+const dateTo = document.getElementById('dateTo');
+const pageInfo = document.getElementById('pageInfo');
+const prevPage = document.getElementById('prevPage');
+const nextPage = document.getElementById('nextPage');
+
 function refreshSelects(){
   const fill=(el,list)=>{
     el.innerHTML='<option value="">Tutti</option>';
@@ -284,17 +114,34 @@ savePurchase.onclick=()=>{
   const p=newProduct.value||productSelect.value;
   const s=newSupplier.value||supplierSelect.value;
   const d=description.value;
-  if(!p||!s||!price.value||!purchaseDate.value)return;
+  const q=quantity.value||0;
+  const u=unit.value;
+  
+  if(!p||!s||!price.value||!purchaseDate.value){
+    alert('Compila tutti i campi obbligatori: Prodotto, Fornitore, Prezzo e Data');
+    return;
+  }
 
   if(!products.includes(p))products.push(p);
   if(!suppliers.includes(s))suppliers.push(s);
 
-  purchases.push({product:p,supplier:s,price:+price.value,date:purchaseDate.value,description:d});
+  const newPurchase = {
+    product:p,
+    supplier:s,
+    price:+price.value,
+    quantity:+q,
+    unit:u,
+    date:purchaseDate.value,
+    description:d
+  };
+  
+  purchases.push(newPurchase);
+  
   localStorage.setItem('purchases',JSON.stringify(purchases));
   localStorage.setItem('products',JSON.stringify(products));
   localStorage.setItem('suppliers',JSON.stringify(suppliers));
 
-  newProduct.value=newSupplier.value=price.value=description.value='';
+  newProduct.value=newSupplier.value=price.value=quantity.value=description.value='';
   purchaseDate.value='';
   showToast();
   refreshSelects();
@@ -326,17 +173,36 @@ function renderArchive(){
 
   const start=(currentPage-1)*perPage;
   const slice=data.slice(start,start+perPage);
-
+  
   archiveTable.innerHTML='';
-  slice.forEach(x=>{
+  slice.forEach((x,idx)=>{
+    const pricePerUnit = x.quantity > 0 ? (x.price / x.quantity).toFixed(2) : x.price.toFixed(2);
     archiveTable.innerHTML+=`
       <tr>
         <td>${x.date}</td>
         <td>${x.product}</td>
         <td>${x.supplier}</td>
-        <td>${x.price.toFixed(2)}</td>
-        <td>${x.description ? x.description : ''}</td>
+        <td>€ ${x.price.toFixed(2)}</td>
+        <td>${x.quantity || '-'}</td>
+        <td>${x.unit || '-'}</td>
+        <td>${x.description || ''}</td>
+        <td><button class="view-stats-btn" data-product="${x.product}" style="padding:0.4rem 0.8rem;font-size:0.8rem;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;">Statistiche</button></td>
       </tr>`;
+  });
+  
+  // Aggiungi event listener per i bottoni statistiche
+  document.querySelectorAll('.view-stats-btn').forEach(btn => {
+    btn.onclick = () => {
+      const productName = btn.dataset.product;
+      // Vai alla pagina statistiche
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById('page-stats').classList.add('active');
+      navButtons.forEach(b=>b.classList.remove('active'));
+      document.querySelector('nav button[data-page="stats"]').classList.add('active');
+      // Filtra per il prodotto
+      statsProduct.value = productName;
+      renderStats();
+    };
   });
 
   pageInfo.textContent=`Pagina ${currentPage} / ${pages}`;
@@ -360,10 +226,88 @@ nextPage.onclick=()=>{
 /* STATISTICHE */
 let chart;
 function renderStats(){
+  const statsInfo = document.getElementById('statsInfo');
+  
+  // Filtra gli acquisti
+  let filteredPurchases = purchases.filter(p => {
+    if(statsProduct.value && p.product !== statsProduct.value) return false;
+    if(statsSupplier.value && p.supplier !== statsSupplier.value) return false;
+    return true;
+  });
+
+  // Calcola statistiche dettagliate
+  if(statsProduct.value && filteredPurchases.length > 0) {
+    const withQuantity = filteredPurchases.filter(p => p.quantity && p.quantity > 0);
+    
+    let infoHTML = `<h3 style="margin:0 0 0.8rem 0;font-size:0.95rem;color:var(--primary);">Statistiche: ${statsProduct.value}</h3>`;
+    infoHTML += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">`;
+    
+    // Miglior prezzo al kg/litro/pezzo
+    if(withQuantity.length > 0) {
+      const pricePerUnit = withQuantity.map(p => ({
+        unitPrice: p.price / p.quantity,
+        unit: p.unit,
+        supplier: p.supplier,
+        date: p.date,
+        price: p.price,
+        quantity: p.quantity
+      }));
+      
+      // Raggruppa per unità
+      const byUnit = {};
+      pricePerUnit.forEach(p => {
+        if(!byUnit[p.unit]) byUnit[p.unit] = [];
+        byUnit[p.unit].push(p);
+      });
+      
+      Object.keys(byUnit).forEach(unit => {
+        const prices = byUnit[unit];
+        const best = prices.reduce((min, p) => p.unitPrice < min.unitPrice ? p : min);
+        const avg = prices.reduce((sum, p) => sum + p.unitPrice, 0) / prices.length;
+        
+        infoHTML += `
+          <div style="background:white;padding:0.8rem;border-radius:6px;border:1px solid var(--border);">
+            <div style="font-size:0.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;font-weight:600;">Miglior Prezzo al ${unit}</div>
+            <div style="font-size:1.3rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">€ ${best.unitPrice.toFixed(2)}/${unit}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">
+              <div>${best.supplier} - ${best.date}</div>
+              <div style="margin-top:0.3rem;">Media: € ${avg.toFixed(2)}/${unit}</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    // Totale speso
+    const totalSpent = filteredPurchases.reduce((sum, p) => sum + p.price, 0);
+    infoHTML += `
+      <div style="background:white;padding:0.8rem;border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:0.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;font-weight:600;">Totale Speso</div>
+        <div style="font-size:1.3rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">€ ${totalSpent.toFixed(2)}</div>
+        <div style="font-size:0.8rem;color:var(--muted);">in ${filteredPurchases.length} acquisti</div>
+      </div>
+    `;
+    
+    // Prezzo medio
+    const avgPrice = totalSpent / filteredPurchases.length;
+    infoHTML += `
+      <div style="background:white;padding:0.8rem;border-radius:6px;border:1px solid var(--border);">
+        <div style="font-size:0.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;font-weight:600;">Prezzo Medio</div>
+        <div style="font-size:1.3rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">€ ${avgPrice.toFixed(2)}</div>
+        <div style="font-size:0.8rem;color:var(--muted);">per acquisto</div>
+      </div>
+    `;
+    
+    infoHTML += `</div>`;
+    statsInfo.innerHTML = infoHTML;
+    statsInfo.style.display = 'block';
+  } else {
+    statsInfo.style.display = 'none';
+  }
+
+  // Grafico mensile
   const map={};
-  purchases.forEach(p=>{
-    if(statsProduct.value&&p.product!==statsProduct.value)return;
-    if(statsSupplier.value&&p.supplier!==statsSupplier.value)return;
+  filteredPurchases.forEach(p=>{
     const m=p.date.slice(0,7);
     map[m]=(map[m]||0)+p.price;
   });
@@ -393,6 +337,18 @@ function renderStats(){
 }
 
 /* EXPORT */
+const toast = document.getElementById('toast');
+const exportExcel = document.getElementById('exportExcel');
+const exportPDF = document.getElementById('exportPDF');
+const dateRange = document.getElementById('dateRange');
+const priceLabel = document.getElementById('priceLabel');
+
+// Aggiorna label prezzo quando cambia l'unità
+unit.onchange = () => {
+  const unitText = unit.value === 'kg' ? 'al kg' : unit.value === 'litri' ? 'al litro' : 'al pezzo';
+  priceLabel.textContent = `Prezzo (€ ${unitText})`;
+};
+
 exportExcel.onclick=()=>{
   const ws=XLSX.utils.json_to_sheet(purchases);
   const wb=XLSX.utils.book_new();
@@ -410,11 +366,26 @@ function showToast(){
 filterPriceMode.onchange=()=>filterPriceExact.classList.toggle('hidden',filterPriceMode.value!=='exact');
 filterDateMode.onchange=()=>dateRange.classList.toggle('hidden',filterDateMode.value!=='range');
 
-document.querySelectorAll('select,input').forEach(e=>e.addEventListener('change',()=>{
-  renderArchive();
-  renderStats();
-}));
+// Listener per filtri statistiche
+statsProduct.onchange = () => renderStats();
+statsSupplier.onchange = () => renderStats();
 
+// Listener per filtri archivio
+filterProduct.onchange = () => renderArchive();
+filterSupplier.onchange = () => renderArchive();
+filterPriceMode.onchange = () => { 
+  filterPriceExact.classList.toggle('hidden',filterPriceMode.value!=='exact'); 
+  renderArchive(); 
+};
+filterPriceExact.onchange = () => renderArchive();
+filterDateMode.onchange = () => { 
+  dateRange.classList.toggle('hidden',filterDateMode.value!=='range'); 
+  renderArchive(); 
+};
+dateFrom.onchange = () => renderArchive();
+dateTo.onchange = () => renderArchive();
+
+// Inizializzazione al caricamento
 refreshSelects();
 renderArchive();
 renderStats();
