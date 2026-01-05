@@ -33,10 +33,21 @@
 
 /* Mobile (max-width: 768px) - ESPERIENZA MAGNIFICA */
 @media(max-width:768px){
-  /* Layout base mobile */
+  /* Layout base mobile - FIXED HEADER E FOOTER */
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+  
   body {
     padding-left: 0;
     font-size: 15px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
   }
   
   /* Nascondi sidebar, mostra logo in topbar */
@@ -44,13 +55,21 @@
     display: none;
   }
   
-  /* Topbar ottimizzata mobile con logo */
+  /* Topbar FISSA in alto */
   .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
     padding: 0.8rem 1rem;
     flex-direction: row;
     gap: 0.8rem;
     align-items: center;
     flex-wrap: wrap;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
   
   /* Logo mobile nell'header */
@@ -92,10 +111,25 @@
   
   /* Layout colonne singole con scroll abilitato */
   main {
+    flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    height: auto;
-    min-height: 100vh;
+    padding: 1rem;
+    margin-top: 120px; /* Spazio per topbar fissa */
+    margin-bottom: 60px; /* Spazio per footer fisso */
+  }
+  
+  /* Footer FISSO in basso */
+  footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: white;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
   }
   
   .new-main-flex, .card-flex {
@@ -114,6 +148,12 @@
     padding: 0.8rem;
     max-height: none;
     border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+  
+  .page {
+    min-height: auto;
+    padding-bottom: 2rem;
   }
   
   /* Form mobile friendly */
@@ -340,29 +380,7 @@
   
   main {
     padding: 0.6rem;
-  }
-}
-
-/* Fix scroll mobile - assicura che il body possa scrollare */
-@media(max-width:768px){
-  html, body {
-    overflow-x: hidden;
-    overflow-y: auto;
-    height: auto;
-    min-height: 100vh;
-  }
-  
-  body {
-    position: relative;
-  }
-  
-  .page {
-    overflow: visible;
-    min-height: auto;
-  }
-  
-  /* Assicura che i contenuti non escano dallo schermo */
-  .card {
-    overflow: visible;
+    margin-top: 120px;
+    margin-bottom: 60px;
   }
 }
