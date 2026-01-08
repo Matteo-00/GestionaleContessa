@@ -1,6 +1,16 @@
-let purchases = JSON.parse(localStorage.getItem('purchases')) || [];
-let products = JSON.parse(localStorage.getItem('products')) || [];
-let suppliers = JSON.parse(localStorage.getItem('suppliers')) || [];
+let purchases = [];
+let products = [];
+let suppliers = [];
+
+// Carica i dati da Supabase all'avvio
+async function loadData() {
+  purchases = await db.getAllPurchases();
+  products = await db.getAllProducts();
+  suppliers = await db.getAllSuppliers();
+  refreshSelects();
+  renderArchive();
+  renderStats();
+}
 
 /* NAV */
 const navButtons = document.querySelectorAll('nav button');
@@ -188,7 +198,7 @@ function renderStars(rating) {
 }
 
 /* SAVE */
-savePurchase.onclick=()=>{
+savePurchase.onclick = async () => {
   const p=newProduct.value||productSelect.value;
   const s=newSupplier.value||supplierSelect.value;
   const d=description.value;
@@ -201,36 +211,38 @@ savePurchase.onclick=()=>{
     return;
   }
 
-  if(!products.includes(p))products.push(p);
-  if(!suppliers.includes(s))suppliers.push(s);
-
-  const newPurchase = {
-    product:p,
-    supplier:s,
-    price:+price.value,
-    quantity:+q,
-    unit:u,
-    date:purchaseDate.value,
-    description:d,
-    rating:r,
-    lastPurchaseDate:purchaseDate.value
-  };
-  
-  purchases.push(newPurchase);
-  
-  localStorage.setItem('purchases',JSON.stringify(purchases));
-  localStorage.setItem('products',JSON.stringify(products));
-  localStorage.setItem('suppliers',JSON.stringify(suppliers));
-
-  newProduct.value=newSupplier.value=price.value=quantity.value=description.value='';
-  purchaseDate.value='';
-  rating.value='0';
-  currentRating=0;
-  updateStars(0, ratingStars);
-  showToast();
-  refreshSelects();
-  renderArchive();
-  renderStats();
+  try {
+    const newPurchase = {
+      product:p,
+      supplier:s,
+      price:+price.value,
+      quantity:+q,
+      unit:u,
+      date:purchaseDate.value,
+      description:d,
+      rating:r,
+      lastPurchaseDate:purchaseDate.value
+    };
+    
+    const saved = await db.addPurchase(newPurchase);
+    purchases.push(saved);
+    
+    // Ricarica le liste prodotti e fornitori
+    products = await db.getAllProducts();
+    suppliers = await db.getAllSuppliers();
+    
+    newProduct.value=newSupplier.value=price.value=quantity.value=description.value='';
+    purchaseDate.value='';
+    rating.value='0';
+    currentRating=0;
+    updateStars(0, ratingStars);
+    showToast();
+    refreshSelects();
+    renderArchive();
+    renderStats();
+  } catch (error) {
+    alert('Errore nel salvataggio: ' + error.message);
+  }
 };
 
 /* ARCHIVIO + PAGINAZIONE */
@@ -496,9 +508,7 @@ dateFrom.onchange = () => renderArchive();
 dateTo.onchange = () => renderArchive();
 
 // Inizializzazione al caricamento
-refreshSelects();
-renderArchive();
-renderStats();
+loadData(); // Carica i dati da Supabase
 
 // ===== GESTIONE DIALOG RIACQUISTO =====
 const repurchaseDialog = document.getElementById('repurchaseDialog');
@@ -529,37 +539,41 @@ function openRepurchaseDialog(purchase, index) {
   repurchaseDialog.showModal();
 }
 
-saveRepurchase.onclick = () => {
+saveRepurchase.onclick = async () => {
   if (!repurchaseQuantity.value || !repurchasePrice.value) {
     alert('Inserisci quantità e prezzo per il riacquisto');
     return;
   }
   
-  const originalPurchase = purchases[currentRepurchaseIndex];
-  const today = new Date().toISOString().split('T')[0];
-  
-  const newPurchase = {
-    product: originalPurchase.product,
-    supplier: originalPurchase.supplier,
-    price: parseFloat(repurchasePrice.value),
-    quantity: parseFloat(repurchaseQuantity.value),
-    unit: originalPurchase.unit,
-    date: today,
-    description: originalPurchase.description || '',
-    rating: originalPurchase.rating || 0,
-    lastPurchaseDate: today
-  };
-  
-  purchases.push(newPurchase);
-  
-  // Aggiorna anche la data ultimo acquisto del prodotto originale
-  purchases[currentRepurchaseIndex].lastPurchaseDate = today;
-  
-  localStorage.setItem('purchases', JSON.stringify(purchases));
-  
-  repurchaseDialog.close();
-  showToast();
-  renderArchive();
+  try {
+    const originalPurchase = purchases[currentRepurchaseIndex];
+    const today = new Date().toISOString().split('T')[0];
+    
+    const newPurchase = {
+      product: originalPurchase.product,
+      supplier: originalPurchase.supplier,
+      price: parseFloat(repurchasePrice.value),
+      quantity: parseFloat(repurchaseQuantity.value),
+      unit: originalPurchase.unit,
+      date: today,
+      description: originalPurchase.description || '',
+      rating: originalPurchase.rating || 0,
+      lastPurchaseDate: today
+    };
+    
+    const saved = await db.addPurchase(newPurchase);
+    purchases.push(saved);
+    
+    // Aggiorna anche la data ultimo acquisto del prodotto originale
+    await db.updatePurchase(originalPurchase.id, { lastPurchaseDate: today });
+    purchases[currentRepurchaseIndex].lastPurchaseDate = today;
+    
+    repurchaseDialog.close();
+    showToast();
+    renderArchive();
+  } catch (error) {
+    alert('Errore nel riacquisto: ' + error.message);
+  }
 };
 
 closeRepurchaseDialog.onclick = () => {
@@ -619,43 +633,41 @@ function openEditDialog(purchase, index) {
   editDialog.showModal();
 }
 
-saveEdit.onclick = () => {
+saveEdit.onclick = async () => {
   if (!editProduct.value || !editSupplier.value || !editPrice.value || !editDate.value) {
     alert('Compila tutti i campi obbligatori');
     return;
   }
   
-  const updatedPurchase = {
-    ...purchases[currentEditIndex],
-    product: editProduct.value,
-    supplier: editSupplier.value,
-    price: parseFloat(editPrice.value),
-    quantity: parseFloat(editQuantity.value) || 0,
-    unit: editUnit.value,
-    date: editDate.value,
-    description: editDescription.value,
-    rating: parseFloat(editRating.value) || 0
-  };
-  
-  purchases[currentEditIndex] = updatedPurchase;
-  
-  // Aggiorna prodotti e fornitori se necessario
-  if (!products.includes(updatedPurchase.product)) {
-    products.push(updatedPurchase.product);
+  try {
+    const purchaseToUpdate = purchases[currentEditIndex];
+    
+    const updatedPurchase = {
+      product: editProduct.value,
+      supplier: editSupplier.value,
+      price: parseFloat(editPrice.value),
+      quantity: parseFloat(editQuantity.value) || 0,
+      unit: editUnit.value,
+      date: editDate.value,
+      description: editDescription.value,
+      rating: parseFloat(editRating.value) || 0
+    };
+    
+    await db.updatePurchase(purchaseToUpdate.id, updatedPurchase);
+    purchases[currentEditIndex] = { ...purchaseToUpdate, ...updatedPurchase };
+    
+    // Ricarica le liste prodotti e fornitori
+    products = await db.getAllProducts();
+    suppliers = await db.getAllSuppliers();
+    
+    editDialog.close();
+    showToast();
+    refreshSelects();
+    renderArchive();
+    renderStats();
+  } catch (error) {
+    alert('Errore nell\'aggiornamento: ' + error.message);
   }
-  if (!suppliers.includes(updatedPurchase.supplier)) {
-    suppliers.push(updatedPurchase.supplier);
-  }
-  
-  localStorage.setItem('purchases', JSON.stringify(purchases));
-  localStorage.setItem('products', JSON.stringify(products));
-  localStorage.setItem('suppliers', JSON.stringify(suppliers));
-  
-  editDialog.close();
-  showToast();
-  refreshSelects();
-  renderArchive();
-  renderStats();
 };
 
 closeEditDialog.onclick = () => {
