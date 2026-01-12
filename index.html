@@ -51,17 +51,59 @@
 <section id="page-new" class="page active">
   <div class="card">
     <div class="new-main-flex wide-forms">
-      <!-- PARAGRAFO 1: Ricerca prodotto -->
-      <div class="search-section big-tile wide-tile">
-        <div class="form-header">
-          <span class="form-icon">→</span>
-          <h2>Cerca Prodotto</h2>
+      <div style="display:flex;flex-direction:column;gap:0.8rem;flex:1 1 32%;min-width:280px;">
+        <!-- PARAGRAFO 1: Ricerca prodotto -->
+        <div class="search-section big-tile wide-tile" style="margin-bottom:0;">
+          <div class="form-header">
+            <span class="form-icon">→</span>
+            <h2>Cerca Prodotto</h2>
+          </div>
+          <p class="subtitle">Trova rapidamente prodotti esistenti</p>
+          <label for="searchProduct">Nome prodotto</label>
+          <input id="searchProduct" class="search-bar" type="text" placeholder="Inizia a digitare...">
+          <ul id="searchResults" class="search-results"></ul>
+          <div id="productDetails" class="product-details" style="display:none;"></div>
         </div>
-        <p class="subtitle">Trova rapidamente prodotti esistenti</p>
-        <label for="searchProduct">Nome prodotto</label>
-        <input id="searchProduct" class="search-bar" type="text" placeholder="Inizia a digitare...">
-        <ul id="searchResults" class="search-results"></ul>
-        <div id="productDetails" class="product-details" style="display:none;"></div>
+
+        <!-- BADGE STATISTICHE SOPRA -->
+        <div class="stats-badges-row">
+          <div class="stat-badge stat-badge-purple">
+            <span class="stat-badge-label">Spese Totali</span>
+            <span class="stat-badge-value" id="totalSpent">€ 0</span>
+          </div>
+          <div class="stat-badge stat-badge-teal">
+            <span class="stat-badge-label">Fornitori Attivi</span>
+            <span class="stat-badge-value" id="activeSuppliers">0</span>
+          </div>
+          <div class="stat-badge stat-badge-amber">
+            <span class="stat-badge-label">Prodotti Registrati</span>
+            <span class="stat-badge-value" id="registeredProducts">0</span>
+          </div>
+        </div>
+
+        <!-- PILLOLA STATISTICHE ANDAMENTO SPESE -->
+        <div class="spending-trends-pill" id="spendingTrendsPill">
+          <div class="pill-header">
+            <div>
+              <span class="trend-icon">📈</span>
+              <h3 class="pill-title">Andamento Spese</h3>
+              <span class="period-total-badge">
+                <span class="period-total-label">Totale:</span>
+                <span class="period-total-value" id="periodTotal">€ 0</span>
+              </span>
+            </div>
+            <select id="trendsPeriod" class="trends-filter">
+              <option value="7">7g</option>
+              <option value="30" selected>30g</option>
+              <option value="90">90g</option>
+              <option value="180">6m</option>
+              <option value="365">1a</option>
+            </select>
+          </div>
+          <div class="trends-chart-wrapper">
+            <canvas id="trendsChart"></canvas>
+          </div>
+        </div>
       </div>
 
       <!-- PARAGRAFO 2: Nuovo prodotto -->
@@ -201,23 +243,35 @@
   </div>
 </section>
 
-<!-- STATISTICHE -->
+<!-- STATISTICHE CON AI -->
 <section id="page-stats" class="page">
   <div class="card">
-    <h2>Statistiche</h2>
-    <p class="subtitle">Analizza l'andamento delle spese</p>
+    <h2>Analisi Intelligente Prodotti 🤖</h2>
+    <p class="subtitle">L'AI confronta tutti gli acquisti e ti consiglia il migliore</p>
 
     <div class="filters">
-      <select id="statsProduct" class="fixed-select"></select>
-      <select id="statsSupplier" class="fixed-select"></select>
+      <select id="statsProduct" class="fixed-select">
+        <option value="">Seleziona un prodotto</option>
+      </select>
+      <select id="statsSupplier" class="fixed-select">
+        <option value="">Tutti i fornitori</option>
+      </select>
     </div>
 
-    <!-- Info box statistiche dettagliate -->
-    <div id="statsInfo" style="display:none;margin:1rem 0;padding:1rem;background:var(--card-subtle);border-radius:8px;border-left:3px solid var(--primary);"></div>
+    <!-- Pulsante Analizza con AI -->
+    <button id="analyzeWithAI" class="ai-analyze-btn" disabled>
+      <span class="ai-icon">✨</span>
+      <span>Analizza con AI</span>
+    </button>
 
-    <div class="chart-wrap">
-      <canvas id="statsChart" height="120"></canvas>
+    <!-- Loading -->
+    <div id="aiLoading" class="ai-loading" style="display:none;">
+      <div class="loading-spinner"></div>
+      <p>L'AI sta analizzando tutti gli acquisti...</p>
     </div>
+
+    <!-- Risultati AI -->
+    <div id="aiResults" class="ai-results" style="display:none;"></div>
   </div>
 </section>
 

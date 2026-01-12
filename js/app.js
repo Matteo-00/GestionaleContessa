@@ -10,6 +10,8 @@ async function loadData() {
   refreshSelects();
   renderArchive();
   renderStats();
+  renderSpendingTrends(); // Inizializza la pillola andamento spese
+  updateInfoBadges(); // Inizializza i badge informativi
 }
 
 /* NAV */
@@ -30,11 +32,23 @@ navButtons.forEach((btn,i)=>{
 const searchProduct = document.getElementById('searchProduct');
 const searchResults = document.getElementById('searchResults');
 const productDetails = document.getElementById('productDetails');
+const spendingTrendsPill = document.getElementById('spendingTrendsPill');
+const statsBadgesRow = document.querySelector('.stats-badges-row');
 
 function renderProductSearchResults(query) {
   searchResults.innerHTML = '';
   productDetails.style.display = 'none';
   productDetails.innerHTML = '';
+  
+  // Oscura la pillola andamento spese E i badge durante la ricerca
+  if (query && query.length > 0) {
+    spendingTrendsPill.classList.add('dimmed');
+    if (statsBadgesRow) statsBadgesRow.classList.add('dimmed');
+  } else {
+    spendingTrendsPill.classList.remove('dimmed');
+    if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed');
+  }
+  
   if (!query) return;
   const filtered = products.filter(p => p.toLowerCase().includes(query.toLowerCase()));
   if (filtered.length === 0) {
@@ -54,9 +68,11 @@ function renderProductSearchResults(query) {
       // Filtra per il prodotto selezionato
       filterProduct.value = prod;
       
-      // Pulisci la ricerca
+      // Pulisci la ricerca e ripristina la pillola E i badge
       searchProduct.value = '';
       searchResults.innerHTML = '';
+      spendingTrendsPill.classList.remove('dimmed');
+      if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed');
       
       // Renderizza l'archivio con il filtro
       currentPage = 1; // Reset alla prima pagina
@@ -77,6 +93,8 @@ if (searchProduct) {
   document.addEventListener('click', e => {
     if (!searchProduct.contains(e.target) && !searchResults.contains(e.target)) {
       searchResults.innerHTML = '';
+      spendingTrendsPill.classList.remove('dimmed'); // Ripristina anche la pillola
+      if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed'); // Ripristina anche i badge
     }
   });
 }
@@ -240,6 +258,8 @@ savePurchase.onclick = async () => {
     refreshSelects();
     renderArchive();
     renderStats();
+    renderSpendingTrends(); // Aggiorna la pillola andamento spese
+    updateInfoBadges(); // Aggiorna i badge informativi
   } catch (error) {
     alert('Errore nel salvataggio: ' + error.message);
   }
@@ -347,8 +367,17 @@ nextPage.onclick=()=>{
 
 /* STATISTICHE */
 let chart;
+let trendsChart;
+
 function renderStats(){
   const statsInfo = document.getElementById('statsInfo');
+  const statsChartCanvas = document.getElementById('statsChart');
+  
+  // Verifica che gli elementi esistano nel DOM
+  if (!statsInfo || !statsChartCanvas) {
+    console.warn('Elementi statistiche non trovati nel DOM');
+    return;
+  }
   
   // Filtra gli acquisti
   let filteredPurchases = purchases.filter(p => {
@@ -438,7 +467,7 @@ function renderStats(){
   const values=labels.map(l=>map[l]);
 
   if(chart)chart.destroy();
-  chart=new Chart(statsChart,{
+  chart=new Chart(statsChartCanvas,{
     type:'bar',
     data:{
       labels,
@@ -507,8 +536,266 @@ filterDateMode.onchange = () => {
 dateFrom.onchange = () => renderArchive();
 dateTo.onchange = () => renderArchive();
 
-// Inizializzazione al caricamento
-loadData(); // Carica i dati da Supabase
+// Inizializzazione al caricamento - aspetta che il DOM sia pronto
+document.addEventListener('DOMContentLoaded', () => {
+  // Event listener per il cambio periodo andamento spese
+  const trendsPeriodEl = document.getElementById('trendsPeriod');
+  if (trendsPeriodEl) {
+    trendsPeriodEl.addEventListener('change', renderSpendingTrends);
+  }
+  
+  loadData(); // Carica i dati da Supabase
+});
+
+// ===== PILLOLA ANDAMENTO SPESE =====
+function renderSpendingTrends() {
+  const periodSelect = document.getElementById('trendsPeriod');
+  const periodTotalEl = document.getElementById('periodTotal');
+  const trendsChartCanvas = document.getElementById('trendsChart');
+  
+  if (!periodSelect || !periodTotalEl || !trendsChartCanvas) {
+    console.warn('Elementi andamento spese non trovati nel DOM');
+    return;
+  }
+  
+  const period = parseInt(periodSelect.value); // Ora è in giorni
+  
+  // Calcola la data di inizio in base al periodo selezionato
+  const now = new Date();
+  const startDate = new Date();
+  startDate.setDate(now.getDate() - period);
+  
+  // Filtra gli acquisti nel periodo
+  const filteredPurchases = purchases.filter(p => {
+    const purchaseDate = new Date(p.date);
+    return purchaseDate >= startDate && purchaseDate <= now;
+  });
+  
+  // Calcola e aggiorna il totale del periodo
+  const periodTotal = filteredPurchases.reduce((sum, p) => sum + (p.price * (p.quantity || 1)), 0);
+  document.getElementById('periodTotal').textContent = `€ ${periodTotal.toFixed(2)}`;
+  
+  if (filteredPurchases.length === 0) {
+    // Nessun dato, grafico vuoto
+    if (trendsChart) trendsChart.destroy();
+    return;
+  }
+  
+  // Decidi se raggruppare per giorni o per mesi
+  const groupByMonth = period > 60; // Se più di 60 giorni, raggruppa per mese
+  
+  let labels = [];
+  let values = [];
+  
+  if (groupByMonth) {
+    // Raggruppa per mese
+    const monthlyData = {};
+    filteredPurchases.forEach(p => {
+      const monthKey = p.date.slice(0, 7); // YYYY-MM
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = 0;
+      }
+      monthlyData[monthKey] += p.price * (p.quantity || 1);
+    });
+    
+    // Ordina per data
+    const sortedMonths = Object.keys(monthlyData).sort();
+    values = sortedMonths.map(m => monthlyData[m]);
+    
+    // Formatta le etichette (mese/anno)
+    labels = sortedMonths.map(m => {
+      const [year, month] = m.split('-');
+      const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+      return `${monthNames[parseInt(month) - 1]} '${year.slice(2)}`;
+    });
+  } else {
+    // Raggruppa per giorno
+    const dailyData = {};
+    filteredPurchases.forEach(p => {
+      const dayKey = p.date; // YYYY-MM-DD
+      if (!dailyData[dayKey]) {
+        dailyData[dayKey] = 0;
+      }
+      dailyData[dayKey] += p.price * (p.quantity || 1);
+    });
+    
+    // Ordina per data
+    const sortedDays = Object.keys(dailyData).sort();
+    values = sortedDays.map(d => dailyData[d]);
+    
+    // Formatta le etichette (giorno/mese)
+    labels = sortedDays.map(d => {
+      const [year, month, day] = d.split('-');
+      return `${day}/${month}`;
+    });
+  }
+  
+  // Crea o aggiorna il grafico con stile scenografico "onde/montagne"
+  if (trendsChart) trendsChart.destroy();
+  
+  trendsChart = new Chart(trendsChartCanvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Spesa (€)',
+        data: values,
+        backgroundColor: 'rgba(115, 135, 142, 0.2)', // #73878e con trasparenza per riempimento
+        borderColor: '#73878e', // Colore linea
+        borderWidth: 2.5,
+        pointBackgroundColor: '#73878e', // Colore punti
+        pointBorderColor: '#5a6a71',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#8a9ba3',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          backgroundColor: 'rgba(30, 58, 138, 0.95)',
+          padding: 10,
+          titleFont: {
+            size: 12,
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 11
+          },
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            label: function(context) {
+              return 'Spesa: €' + context.parsed.y.toFixed(2);
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '€' + value.toFixed(0);
+            },
+            font: {
+              size: 9
+            },
+            color: '#64748b'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.04)',
+            drawBorder: false
+          }
+        },
+        x: {
+          ticks: {
+            font: {
+              size: 8
+            },
+            maxRotation: 45,
+            minRotation: 45,
+            color: '#64748b'
+          },
+          grid: {
+            display: false
+          }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart',
+        onProgress: function(animation) {
+          // Effetto pulsazione durante l'animazione
+          const progress = animation.currentStep / animation.numSteps;
+          this.canvas.style.opacity = 0.3 + (progress * 0.7);
+        },
+        onComplete: function() {
+          // Ripristina opacità completa alla fine
+          this.canvas.style.opacity = 1;
+        }
+      },
+      animations: {
+        tension: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: 0,
+          to: 0.4,
+          loop: false
+        },
+        y: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: (ctx) => {
+            if (ctx.type === 'data') {
+              return ctx.chart.scales.y.getPixelForValue(0);
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Funzione per aggiornare i badge informativi
+function updateInfoBadges() {
+  const totalSpentEl = document.getElementById('totalSpent');
+  const activeSuppliersEl = document.getElementById('activeSuppliers');
+  const registeredProductsEl = document.getElementById('registeredProducts');
+  
+  // Verifica che gli elementi esistano nel DOM
+  if (!totalSpentEl || !activeSuppliersEl || !registeredProductsEl) {
+    console.warn('Badge informativi non trovati nel DOM');
+    return;
+  }
+  
+  // Spese totali
+  const totalSpent = purchases.reduce((sum, p) => sum + (p.price * (p.quantity || 1)), 0);
+  animateValue('totalSpent', 0, totalSpent, 1500, '€ ');
+  
+  // Numero fornitori attivi (sincronizzato a 1500ms)
+  const uniqueSuppliers = new Set(purchases.map(p => p.supplier));
+  animateValue('activeSuppliers', 0, uniqueSuppliers.size, 1500);
+  
+  // Numero prodotti registrati (sincronizzato a 1500ms)
+  const uniqueProducts = new Set(purchases.map(p => p.product));
+  animateValue('registeredProducts', 0, uniqueProducts.size, 1500);
+}
+
+// Funzione per animare i numeri da 0 al valore finale
+function animateValue(elementId, start, end, duration, prefix = '') {
+  const element = document.getElementById(elementId);
+  const range = end - start;
+  const increment = range / (duration / 16); // 60fps
+  let current = start;
+  
+  const timer = setInterval(() => {
+    current += increment;
+    if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+      current = end;
+      clearInterval(timer);
+    }
+    
+    // Formatta il valore
+    if (prefix === '€ ') {
+      element.textContent = prefix + current.toFixed(2);
+    } else {
+      element.textContent = Math.floor(current);
+    }
+  }, 16);
+}
 
 // ===== GESTIONE DIALOG RIACQUISTO =====
 const repurchaseDialog = document.getElementById('repurchaseDialog');
