@@ -309,7 +309,7 @@ function renderArchive(){
         <td>${starsDisplay}</td>
         <td>${x.description || ''}</td>
         <td style="white-space:nowrap;">
-          <button class="view-stats-btn" data-product="${x.product}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Statistiche</button>
+          <button class="view-stats-btn" data-product="${x.product}" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Statistiche</button>
           <button class="repurchase-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#2f7d65;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Acquista</button>
           <button class="edit-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;">Modifica</button>
         </td>
@@ -320,14 +320,48 @@ function renderArchive(){
   document.querySelectorAll('.view-stats-btn').forEach(btn => {
     btn.onclick = () => {
       const productName = btn.dataset.product;
+      const recordId = parseInt(btn.dataset.id);
+      
+      // Salva l'ID del record selezionato per evidenziarlo
+      window.selectedRecordId = recordId;
+      
       // Vai alla pagina statistiche
       document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
       document.getElementById('page-stats').classList.add('active');
       navButtons.forEach(b=>b.classList.remove('active'));
       document.querySelector('nav button[data-page="stats"]').classList.add('active');
-      // Filtra per il prodotto
-      statsProduct.value = productName;
-      renderStats();
+      
+      // Aspetta che il DOM si aggiorni prima di procedere
+      setTimeout(() => {
+        // Filtra per il prodotto
+        statsProduct.value = productName;
+        
+        // IMPORTANTE: Aggiorna manualmente lo stato del bottone dopo aver impostato il valore
+        if (window.updateAnalyzeButton) {
+          window.updateAnalyzeButton();
+        }
+        
+        // Aspetta un frame per assicurarsi che il select sia aggiornato
+        requestAnimationFrame(() => {
+          renderStats();
+          
+          // Trigger automatico dell'analisi AI
+          setTimeout(() => {
+            const analyzeBtn = document.getElementById('analyzeWithAI');
+            if (analyzeBtn && !analyzeBtn.disabled) {
+              console.log('🔄 Trigger automatico analisi AI per:', productName);
+              // Forza il click
+              analyzeBtn.click();
+            } else {
+              console.warn('⚠️ Bottone analisi non disponibile:', {
+                exists: !!analyzeBtn,
+                disabled: analyzeBtn?.disabled,
+                productValue: statsProduct?.value
+              });
+            }
+          }, 300);
+        });
+      }, 100);
     };
   });
   
@@ -370,121 +404,17 @@ let chart;
 let trendsChart;
 
 function renderStats(){
-  const statsInfo = document.getElementById('statsInfo');
-  const statsChartCanvas = document.getElementById('statsChart');
+  const statsProduct = document.getElementById('statsProduct');
   
-  // Verifica che gli elementi esistano nel DOM
-  if (!statsInfo || !statsChartCanvas) {
-    console.warn('Elementi statistiche non trovati nel DOM');
+  // Verifica che l'elemento select esista
+  if (!statsProduct) {
+    console.warn('Elemento statsProduct non trovato nel DOM');
     return;
   }
   
-  // Filtra gli acquisti
-  let filteredPurchases = purchases.filter(p => {
-    if(statsProduct.value && p.product !== statsProduct.value) return false;
-    if(statsSupplier.value && p.supplier !== statsSupplier.value) return false;
-    return true;
-  });
-
-  // Calcola statistiche dettagliate
-  if(statsProduct.value && filteredPurchases.length > 0) {
-    const withQuantity = filteredPurchases.filter(p => p.quantity && p.quantity > 0);
-    
-    let infoHTML = `<h3 style="margin:0 0 0.8rem 0;font-size:0.95rem;color:var(--primary);">Statistiche: ${statsProduct.value}</h3>`;
-    infoHTML += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">`;
-    
-    // Miglior prezzo al kg/litro/pezzo
-    if(withQuantity.length > 0) {
-      const pricePerUnit = withQuantity.map(p => ({
-        unitPrice: p.price / p.quantity,
-        unit: p.unit,
-        supplier: p.supplier,
-        date: p.date,
-        price: p.price,
-        quantity: p.quantity
-      }));
-      
-      // Raggruppa per unità
-      const byUnit = {};
-      pricePerUnit.forEach(p => {
-        if(!byUnit[p.unit]) byUnit[p.unit] = [];
-        byUnit[p.unit].push(p);
-      });
-      
-      Object.keys(byUnit).forEach(unit => {
-        const prices = byUnit[unit];
-        const best = prices.reduce((min, p) => p.unitPrice < min.unitPrice ? p : min);
-        const avg = prices.reduce((sum, p) => sum + p.unitPrice, 0) / prices.length;
-        
-        infoHTML += `
-          <div style="background:white;padding:0.8rem;border-radius:6px;border:1px solid var(--border);">
-            <div style="font-size:0.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;font-weight:600;">Miglior Prezzo al ${unit}</div>
-            <div style="font-size:1.3rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">€ ${best.unitPrice.toFixed(2)}/${unit}</div>
-            <div style="font-size:0.8rem;color:var(--muted);">
-              <div>${best.supplier} - ${best.date}</div>
-              <div style="margin-top:0.3rem;">Media: € ${avg.toFixed(2)}/${unit}</div>
-            </div>
-          </div>
-        `;
-      });
-    }
-    
-    // Totale speso
-    const totalSpent = filteredPurchases.reduce((sum, p) => sum + p.price, 0);
-    infoHTML += `
-      <div style="background:white;padding:0.8rem;border-radius:6px;border:1px solid var(--border);">
-        <div style="font-size:0.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;font-weight:600;">Totale Speso</div>
-        <div style="font-size:1.3rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">€ ${totalSpent.toFixed(2)}</div>
-        <div style="font-size:0.8rem;color:var(--muted);">in ${filteredPurchases.length} acquisti</div>
-      </div>
-    `;
-    
-    // Prezzo medio
-    const avgPrice = totalSpent / filteredPurchases.length;
-    infoHTML += `
-      <div style="background:white;padding:0.8rem;border-radius:6px;border:1px solid var(--border);">
-        <div style="font-size:0.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;font-weight:600;">Prezzo Medio</div>
-        <div style="font-size:1.3rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">€ ${avgPrice.toFixed(2)}</div>
-        <div style="font-size:0.8rem;color:var(--muted);">per acquisto</div>
-      </div>
-    `;
-    
-    infoHTML += `</div>`;
-    statsInfo.innerHTML = infoHTML;
-    statsInfo.style.display = 'block';
-  } else {
-    statsInfo.style.display = 'none';
-  }
-
-  // Grafico mensile
-  const map={};
-  filteredPurchases.forEach(p=>{
-    const m=p.date.slice(0,7);
-    map[m]=(map[m]||0)+p.price;
-  });
-
-  const labels=Object.keys(map).sort();
-  const values=labels.map(l=>map[l]);
-
-  if(chart)chart.destroy();
-  chart=new Chart(statsChartCanvas,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Spesa mensile (€)',
-        data:values,
-        backgroundColor:'#2f7d65'
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      scales:{
-        y:{beginAtZero:true}
-      }
-    }
-  });
+  // La pagina statistiche ora usa solo l'analisi AI
+  // Non ci sono più grafici o statistiche da renderizzare qui
+  console.log('✅ Pagina statistiche pronta, prodotto selezionato:', statsProduct.value);
 }
 
 /* EXPORT */
