@@ -1,0 +1,9 @@
+# File con chiavi API sensibili
+js/config.js
+
+# Node modules (se usi npm)
+node_modules/
+
+# File di sistema
+.DS_Store
+Thumbs.db
