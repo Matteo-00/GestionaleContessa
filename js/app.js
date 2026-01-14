@@ -766,24 +766,26 @@ saveRepurchase.onclick = async () => {
     const originalPurchase = purchases[currentRepurchaseIndex];
     const today = new Date().toISOString().split('T')[0];
     
-    const newPurchase = {
-      product: originalPurchase.product,
-      supplier: originalPurchase.supplier,
-      price: parseFloat(repurchasePrice.value),
-      quantity: parseFloat(repurchaseQuantity.value),
-      unit: originalPurchase.unit,
-      date: today,
-      description: originalPurchase.description || '',
-      rating: originalPurchase.rating || 0,
+    // SOMMA la quantità esistente con quella nuova
+    const oldQuantity = parseFloat(originalPurchase.quantity) || 0;
+    const newQuantity = parseFloat(repurchaseQuantity.value);
+    const totalQuantity = oldQuantity + newQuantity;
+    
+    // AGGIORNA il record esistente invece di crearne uno nuovo
+    const updatedData = {
+      price: parseFloat(repurchasePrice.value),  // Nuovo prezzo
+      quantity: totalQuantity,  // Quantità totale sommata
+      date: today,  // Data aggiornata
       lastPurchaseDate: today
     };
     
-    const saved = await db.addPurchase(newPurchase);
-    purchases.push(saved);
+    await db.updatePurchase(originalPurchase.id, updatedData);
     
-    // Aggiorna anche la data ultimo acquisto del prodotto originale
-    await db.updatePurchase(originalPurchase.id, { lastPurchaseDate: today });
-    purchases[currentRepurchaseIndex].lastPurchaseDate = today;
+    // Aggiorna anche l'array locale
+    purchases[currentRepurchaseIndex].price = updatedData.price;
+    purchases[currentRepurchaseIndex].quantity = updatedData.quantity;
+    purchases[currentRepurchaseIndex].date = updatedData.date;
+    purchases[currentRepurchaseIndex].lastPurchaseDate = updatedData.lastPurchaseDate;
     
     repurchaseDialog.close();
     showToast();
