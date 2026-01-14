@@ -2,7 +2,7 @@
 // AI ANALYZER CON GEMINI API
 // ===================================
 
-const GEMINI_API_KEY = 'AIzaSyDdMtDAC2_Egz_Sh2uiqh9izEa0MkEoPzY';
+const GEMINI_API_KEY = 'AIzaSyCykMDrs5AicpTKMzRFQqAUNO28VhMh7Gk';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // Rate limiting
