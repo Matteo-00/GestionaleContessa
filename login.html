@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - La Contessa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+  <meta name="theme-color" content="#2f7d65">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  
+  <!-- Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --card-subtle: #f8f9fa;
+      --primary: #2f7d65;
+      --primary-dark: #244c3a;
+      --primary-light: #3a9d7e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      --text: #1f2937;
+      --text-light: #4b5563;
+      --error: #b91c1c;
+      --error-bg: #fef2f2;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      --shadow-xl: 0 20px 40px -10px rgba(0,0,0,0.15);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f7f6;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      background: 
+        linear-gradient(135deg, rgba(47, 125, 101, 0.03) 0%, rgba(47, 125, 101, 0.06) 100%);
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 480px;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    /* Header con logo */
+    .login-header {
+      background: var(--primary);
+      padding: 2.5rem 3rem;
+      text-align: center;
+    }
+
+    .logo-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo-img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      opacity: 0.95;
+    }
+
+    .login-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.02em;
+    }
+
+    .login-subtitle {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.75);
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    /* Form */
+    .login-form {
+      padding: 2.5rem 3rem 3rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.01em;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--card-subtle);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .form-input:hover {
+      border-color: #d1d5db;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(47, 125, 101, 0.1);
+    }
+
+    .form-input::placeholder {
+      color: #9ca3af;
+    }
+
+    /* Password wrapper */
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper .form-input {
+      padding-right: 4.5rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.2s ease;
+    }
+
+    .password-toggle:hover {
+      color: var(--primary);
+    }
+
+    /* Error message */
+    .error-message {
+      display: none;
+      padding: 1rem 1.25rem;
+      background: var(--error-bg);
+      border: 1px solid #fecaca;
+      border-left: 3px solid var(--error);
+      border-radius: 6px;
+      color: var(--error);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+      animation: shake 0.4s ease-out;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    /* Submit button */
+    .login-btn {
+      width: 100%;
+      padding: 1.1rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: white;
+      background: var(--primary);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      margin-top: 0.5rem;
+    }
+
+    .login-btn:hover {
+      background: var(--primary-dark);
+      box-shadow: var(--shadow-md);
+    }
+
+    .login-btn:active {
+      transform: scale(0.99);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .btn-text {
+      transition: opacity 0.2s ease;
+    }
+
+    .btn-loader {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      margin-left: -10px;
+      margin-top: -10px;
+    }
+
+    .login-btn.loading .btn-text {
+      opacity: 0;
+    }
+
+    .login-btn.loading .btn-loader {
+      display: block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Footer */
+    .login-footer {
+      padding: 1.25rem 3rem;
+      background: var(--card-subtle);
+      border-top: 1px solid var(--border-light);
+      text-align: center;
+    }
+
+    .footer-text {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* Credits */
+    .credits {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 540px) {
+      body {
+        padding: 1rem;
+      }
+
+      .login-header {
+        padding: 2rem;
+      }
+
+      .login-form {
+        padding: 2rem;
+      }
+
+      .login-footer {
+        padding: 1rem 2rem;
+      }
+
+      .login-title {
+        font-size: 1.75rem;
+      }
+
+      .logo-img {
+        width: 70px;
+        height: 70px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-card">
+    <!-- Header -->
+    <div class="login-header">
+      <div class="logo-wrapper">
+        <img src="assets/logo.png" alt="Logo La Contessa" style="width: 130px; height: 130px;" />
+        <div>
+          <h1 class="login-title">La Contessa</h1>
+          <p class="login-subtitle">Gestionale Magazzino</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <form class="login-form" id="loginForm">
+      <!-- Error message -->
+      <div class="error-message" id="errorMessage">
+        <span id="errorText">Credenziali non valide</span>
+      </div>
+
+      <!-- Username -->
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          class="form-input" 
+          placeholder="Inserisci username"
+          autocomplete="username"
+          required
+        >
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="password-wrapper">
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input" 
+            placeholder="Inserisci password"
+            autocomplete="current-password"
+            required
+          >
+          <button type="button" class="password-toggle" id="passwordToggle">
+            Mostra
+          </button>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="login-btn" id="loginBtn">
+        <span class="btn-text">Accedi</span>
+        <div class="btn-loader"></div>
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      <p class="footer-text">Accesso riservato al personale autorizzato</p>
+    </div>
+  </div>
+
+  <p class="credits">© 2026 La Contessa Ristorante</p>
+</div>
+
+<script>
+  // Configurazione Supabase
+  const supabaseUrl = 'https://zlyikcrrwjxmvoigqpdi.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpseWlrY3Jyd2p4bXZvaWdxcGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4NzIxMTEsImV4cCI6MjA4MzQ0ODExMX0.QaRjSOSWjq0zBZtIvM0fSgqJSgIxpfwaHEfyB-j-Q5w';
+  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  // Elementi DOM
+  const loginForm = document.getElementById('loginForm');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const passwordToggle = document.getElementById('passwordToggle');
+  const loginBtn = document.getElementById('loginBtn');
+  const errorMessage = document.getElementById('errorMessage');
+  const errorText = document.getElementById('errorText');
+
+  // Toggle password visibility
+  passwordToggle.addEventListener('click', () => {
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    passwordToggle.textContent = isPassword ? 'Nascondi' : 'Mostra';
+  });
+
+  // Verifica se già loggato
+  if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    window.location.href = 'index.html';
+  }
+
+  // Handle form submit
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // Reset error
+    errorMessage.classList.remove('show');
+    
+    // Get values
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!username || !password) {
+      showError('Inserisci username e password');
+      return;
+    }
+
+    // Show loading state
+    loginBtn.classList.add('loading');
+    loginBtn.disabled = true;
+
+    try {
+      // Query Supabase per verificare le credenziali
+      // Prima recuperiamo tutti gli utenti, poi filtriamo lato client
+      const { data: users, error } = await supabaseClient
+        .from('Utenti')
+        .select('*');
+
+      if (error) {
+        console.error('Errore Supabase:', error);
+        showError('Errore di connessione al database');
+        return;
+      }
+
+      // Cerca l'utente con username corrispondente (case insensitive)
+      const user = users?.find(u => 
+        u.UserName === username || 
+        u.username === username ||
+        u.Username === username
+      );
+
+      if (!user) {
+        showError('Username non trovato');
+        return;
+      }
+
+      // Verifica password (controlla vari nomi possibili del campo)
+      const userPassword = user.Password || user.password;
+      if (userPassword !== password) {
+        showError('Password non corretta');
+        return;
+      }
+
+      // Login riuscito!
+      sessionStorage.setItem('isLoggedIn', 'true');
+      sessionStorage.setItem('username', username);
+      sessionStorage.setItem('userId', user.id);
+
+      // Nascondi subito la pagina di login per evitare flicker
+      document.querySelector('.login-container').style.display = 'none';
+
+      // Animazione di ingresso con cerchio di pallini
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="loginTransition" style="position:fixed;z-index:9999;inset:0;background:linear-gradient(135deg,#2f7d65 0%,#244c3a 100%);display:flex;align-items:center;justify-content:center;animation:fadeInOut 2.4s cubic-bezier(.4,0,.2,1);">
+          <div class="loader-container">
+            <div class="orbit-ring">
+              <span class="dot dot-1"></span>
+              <span class="dot dot-2"></span>
+              <span class="dot dot-3"></span>
+              <span class="dot dot-4"></span>
+              <span class="dot dot-5"></span>
+              <span class="dot dot-6"></span>
+              <span class="dot dot-7"></span>
+              <span class="dot dot-8"></span>
+            </div>
+            <img src="assets/logo.png" alt="Logo La Contessa" class="transition-logo" />
+          </div>
+        </div>
+        <style>
+          #loginTransition { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+          }
+          
+          .loader-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          .transition-logo {
+            width: 130px;
+            height: 130px;
+            z-index: 2;
+            filter: drop-shadow(0 0 30px rgba(255,255,255,0.5));
+            animation: breathe 2s ease-in-out infinite;
+          }
+          
+          .orbit-ring {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            animation: rotate 3s linear infinite;
+          }
+          
+          .dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            margin: -6px 0 0 -6px;
+            box-shadow: 0 0 15px rgba(255,255,255,0.6);
+            opacity: 0;
+            animation: dotPulse 3s ease-in-out infinite;
+          }
+          
+          .dot-1 { transform: rotate(0deg) translateY(-100px); animation-delay: 0s; }
+          .dot-2 { transform: rotate(45deg) translateY(-100px); animation-delay: 0.1s; }
+          .dot-3 { transform: rotate(90deg) translateY(-100px); animation-delay: 0.2s; }
+          .dot-4 { transform: rotate(135deg) translateY(-100px); animation-delay: 0.3s; }
+          .dot-5 { transform: rotate(180deg) translateY(-100px); animation-delay: 0.4s; }
+          .dot-6 { transform: rotate(225deg) translateY(-100px); animation-delay: 0.5s; }
+          .dot-7 { transform: rotate(270deg) translateY(-100px); animation-delay: 0.6s; }
+          .dot-8 { transform: rotate(315deg) translateY(-100px); animation-delay: 0.7s; }
+          
+          @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
+          }
+          
+          @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+          }
+          
+          @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          @keyframes dotPulse {
+            0%, 100% { opacity: 0; transform: rotate(var(--rotation, 0deg)) translateY(-100px) scale(0.8); }
+            50% { opacity: 1; transform: rotate(var(--rotation, 0deg)) translateY(-100px) scale(1.2); }
+          }
+        </style>
+      `);
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2300);
+      return;
+
+    } catch (err) {
+      console.error('Errore login:', err);
+      showError('Errore di connessione. Riprova.');
+    } finally {
+      loginBtn.classList.remove('loading');
+      loginBtn.disabled = false;
+    }
+  });
+
+  function showError(message) {
+    errorText.textContent = message;
+    errorMessage.classList.add('show');
+    loginBtn.classList.remove('loading');
+    loginBtn.disabled = false;
+  }
+
+  // Focus sul primo campo
+  usernameInput.focus();
+</script>
+
+</body>
+</html>

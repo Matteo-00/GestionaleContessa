@@ -8,6 +8,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
+  <!-- Protezione accesso: redirect a login se non autenticato -->
+  <script>
+    if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = 'login.html';
+    }
+  </script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/mobile-responsive.css">
@@ -43,6 +50,9 @@
       <button data-page="stats" role="tab">Statistiche</button>
     </div>
   </nav>
+  <button id="logoutBtn" class="logout-btn" title="Esci">
+    <span class="logout-text">Esci</span>
+  </button>
 </header>
 
 <main>
@@ -369,10 +379,78 @@
 
 <div id="toast">Salvato</div>
 
+  <!-- Stile logout button -->
+  <style>
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7rem 1.2rem;
+      border: 1.5px solid var(--border);
+      border-radius: 50px;
+      color: var(--primary);
+      background: white;
+      font-size: 1.15rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(.4,0,.2,1);
+      margin-left: 2.5rem;
+      margin-right: 0.5rem;
+      box-shadow: 0 1px 2px rgba(47,125,101,0.03);
+      position: relative;
+      overflow: hidden;
+      min-width: 48px;
+      min-height: 48px;
+      gap: 0;
+    }
+    .logout-btn svg {
+      width: 1.6em;
+      height: 1.6em;
+      transition: transform 0.18s cubic-bezier(.4,0,.2,1);
+      color: var(--primary);
+      margin: 0;
+    }
+    .logout-btn:hover {
+      background: linear-gradient(90deg, #fee2e2 0%, #fff 100%);
+      border-color: #fca5a5;
+      color: #b91c1c;
+      box-shadow: 0 4px 16px rgba(252,165,165,0.10);
+    }
+    .logout-btn:hover svg {
+      transform: translateX(4px);
+      color: #b91c1c;
+    }
+    @media (max-width: 768px) {
+      .logout-btn { 
+        padding: 0.5rem 0.7rem; 
+        font-size: 1.1rem;
+        min-width: 40px;
+        min-height: 40px;
+        margin-left: 1rem;
+      }
+    }
+  </style>
+
   <script src="js/supabase.js"></script>
   <script src="js/app.js"></script>
   <script src="js/config.js"></script>
   <script src="js/ai-analyzer.js"></script>
-</body>
-</html>
+  
+  <!-- Logout script -->
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Vuoi effettuare il logout?')) {
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+
+  <!-- Migliora bottone Esci: solo icona SVG -->
+  <script>
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.innerHTML = `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 15.5V16.5C13.5 17.3284 12.8284 18 12 18H5C4.17157 18 3.5 17.3284 3.5 16.5V3.5C3.5 2.67157 4.17157 2 5 2H12C12.8284 2 13.5 2.67157 13.5 3.5V4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16.5 10L8.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12.5 6.5L16.5 10L12.5 13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    }
+  </script>
 

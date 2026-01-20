@@ -1,9 +1,9 @@
 // ===================================
 // AI ANALYZER CON GEMINI API
 // ===================================
-
-// La chiave API viene caricata da config.js
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// La chiave API viene caricata da config.js (GEMINI_API_KEY)
+// Assicurati che config.js sia caricato PRIMA di questo file nell'HTML
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // Rate limiting
 let lastAPICallTime = 0;
