@@ -3,7 +3,8 @@
 // ===================================
 // La chiave API viene caricata da config.js (GEMINI_API_KEY)
 // Assicurati che config.js sia caricato PRIMA di questo file nell'HTML
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+// const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_URL = 'https://zlyikcrrwjxmvoigqpdi.functions.supabase.co/gemini';
 
 // Rate limiting
 let lastAPICallTime = 0;
@@ -179,34 +180,23 @@ async function analyzeWithGemini(productName, supplierFilter = '') {
 
 // Funzione per chiamare Gemini con retry e backoff esponenziale
 async function callGeminiWithRetry(prompt, retryCount = 0) {
-  console.log(`🔄 Tentativo API #${retryCount + 1}`);
-  
+  console.log(`🔄 Tentativo API Supabase #${retryCount + 1}`);
   try {
-    const requestBody = {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }]
-    };
-    
+    const requestBody = { prompt };
     console.log('\n\n📤 ========================================');
-    console.log('📤 REQUEST COMPLETA PER GEMINI API');
+    console.log('📤 REQUEST PER SUPABASE EDGE FUNCTION');
     console.log('📤 ========================================');
     console.log('📤 URL:', GEMINI_API_URL);
     console.log('📤 Method: POST');
     console.log('📤 Headers:', JSON.stringify({ 'Content-Type': 'application/json' }, null, 2));
-    console.log('\n📤 BODY (copia questo per testare su Postman):');
-    console.log('📤 ========================================');
+    console.log('\n📤 BODY:');
     console.log(JSON.stringify(requestBody, null, 2));
     console.log('📤 ========================================\n');
-    
-    // Log anche il prompt separato per leggibilità
     console.log('\n📝 PROMPT INVIATO:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(prompt);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    
+
     const response = await fetch(GEMINI_API_URL, {
       method: 'POST',
       headers: {
@@ -214,38 +204,42 @@ async function callGeminiWithRetry(prompt, retryCount = 0) {
       },
       body: JSON.stringify(requestBody)
     });
-    
+
     console.log('📥 Response status:', response.status, response.statusText);
     console.log('📥 Response ok:', response.ok);
-    
-    // Se la risposta è OK, restituiscila
+
     if (response.ok) {
       const data = await response.json();
       console.log('📦 Dati JSON ricevuti:', JSON.stringify(data, null, 2));
-      
-      // Estrai la risposta di Gemini
-      const geminiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!geminiResponse) {
-        throw new Error('Risposta non valida da Gemini');
-      }
-      
+      // Adatta qui in base a come risponde la tua Edge Function
+      // Se la risposta è { result: "..." }
+     if (!data || typeof data.text !== 'string') {
+  throw new Error('Risposta non valida dalla funzione Supabase');
+}
+
+return data.text;
+
       return geminiResponse;
     }
-    
-    // Gestione errore 429 - NESSUN RETRY automatico, troppo aggressivo
+
     if (response.status === 429) {
       console.error('❌ 429 TOO MANY REQUESTS - API quota superata!');
-      console.error('Devi aspettare che l\'API si resetti (di solito 1-2 minuti)');
-      throw new Error('Rate limit superato (429). Attendi 1-2 minuti e riprova. L\'API di Gemini ha limiti molto restrittivi sulle richieste.');
+      throw new Error('Rate limit superato (429). Attendi 1-2 minuti e riprova.');
     }
-    
-    // Altri errori
-    throw new Error(`Errore API: ${response.status} ${response.statusText}`);
-    
+
+    // Prova a leggere il messaggio di errore dal body
+    let errorMsg = `Errore API: ${response.status}`;
+    try {
+      const errData = await response.json();
+      errorMsg += ' - ' + (errData.error || JSON.stringify(errData));
+      if (errData.details) {
+        errorMsg += '\nDettagli Gemini: ' + JSON.stringify(errData.details);
+        console.error('Dettagli errore Gemini:', errData.details);
+      }
+    } catch {}
+    throw new Error(errorMsg);
   } catch (error) {
     if (error.message.includes('fetch') && retryCount < MAX_RETRIES) {
-      // Errore di rete, riprova
       const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
       console.log(`Errore di rete. Retry ${retryCount + 1}/${MAX_RETRIES} tra ${retryDelay}ms...`);
       await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -592,3 +586,26 @@ if (document.readyState === 'loading') {
 } else {
   initAIAnalyzer();
 }
+
+// ===============================
+// TEST: Chiamata a Supabase Edge Function Gemini
+// ===============================
+
+window.testSupabaseGemini = async function() {
+  const endpoint = 'https://zlyikcrrwjxmvoigqpdi.functions.supabase.co/gemini';
+  const payload = { prompt: 'Ciao Gemini! Questa è una chiamata di test dalla funzione Supabase.' };
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    console.log('Risposta Supabase Gemini:', data);
+    alert('Risposta Supabase Gemini: ' + JSON.stringify(data));
+  } catch (err) {
+    console.error('Errore chiamata Supabase Gemini:', err);
+    alert('Errore chiamata Supabase Gemini: ' + err.message);
+  }
+};
+// Usa dalla console: testSupabaseGemini();

@@ -29,6 +29,100 @@ navButtons.forEach((btn,i)=>{
 });
 
 // --- Ricerca prodotto in tempo reale ---
+
+// ===============================
+// SCANSIONE FATTURA: Upload e AI OCR
+// ===============================
+const scanInvoiceBtn = document.getElementById('scanInvoiceBtn');
+if (scanInvoiceBtn) {
+  // Crea input file nascosto
+  let fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.style.display = 'none';
+  document.body.appendChild(fileInput);
+
+  scanInvoiceBtn.addEventListener('click', () => {
+    fileInput.value = '';
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    scanInvoiceBtn.disabled = true;
+    scanInvoiceBtn.innerHTML = 'Estrazione in corso...';
+    try {
+      // 1. Leggi l'immagine come base64
+      const base64 = await toBase64(file);
+      // 2. Estrai dati con AI OCR (Gemini Vision via Supabase Edge Function)
+      const ocrResult = await estraiDatiFatturaConAI(base64);
+      if (!ocrResult || !ocrResult.product) throw new Error('Dati non riconosciuti. Riprova con una foto più chiara.');
+      // 3. Aggiungi prodotto
+      await aggiungiProdottoDaFattura(ocrResult);
+      alert('Prodotto aggiunto automaticamente!');
+      // Aggiorna dati
+      products = await db.getAllProducts();
+      suppliers = await db.getAllSuppliers();
+      purchases = await db.getAllPurchases();
+      refreshSelects();
+      renderArchive();
+      renderStats();
+    } catch (err) {
+      alert('Errore durante la scansione: ' + err.message);
+    } finally {
+      scanInvoiceBtn.disabled = false;
+      scanInvoiceBtn.innerHTML = '<span class="ia-btn-icon">📷</span> Scansiona';
+    }
+  });
+
+// Funzione: invia immagine a funzione AI OCR (Gemini Vision via Supabase Edge Function)
+async function estraiDatiFatturaConAI(base64img) {
+  // Endpoint Supabase Edge Function (da creare: /fattura-ocr)
+  const endpoint = 'https://zlyikcrrwjxmvoigqpdi.functions.supabase.co/fattura-ocr';
+  // Prompt per Gemini Vision: chiedi estrazione dati fattura
+  const prompt = `Estrai i seguenti dati dalla foto di una fattura di acquisto per ristorante:\n- Nome prodotto\n- Nome fornitore\n- Prezzo unitario\n- Quantità\n- Unità di misura\n- Data acquisto\n- Note (se presenti)\nRispondi in JSON con queste chiavi: product, supplier, price, quantity, unit, date, description.`;
+  const body = {
+    image: base64img,
+    prompt
+  };
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Errore OCR AI');
+  // Si aspetta un oggetto { product, supplier, price, quantity, unit, date, description }
+  return data;
+}
+
+// Funzione: aggiungi prodotto estratto da fattura
+async function aggiungiProdottoDaFattura(dati) {
+  // Adatta i dati per il db
+  const nuovo = {
+    product: dati.product,
+    supplier: dati.supplier,
+    price: parseFloat(dati.price) || 0,
+    quantity: parseFloat(dati.quantity) || 0,
+    unit: dati.unit || 'kg',
+    date: dati.date || new Date().toISOString().slice(0,10),
+    description: dati.description || '',
+    rating: 0
+  };
+  await db.addPurchase(nuovo);
+}
+}
+
+// Helper: file -> base64
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 const searchProduct = document.getElementById('searchProduct');
 const searchResults = document.getElementById('searchResults');
 const productDetails = document.getElementById('productDetails');
