@@ -494,21 +494,327 @@ nextPage.onclick=()=>{
 }
 
 /* STATISTICHE */
-let chart;
-let trendsChart;
+let supplierPieChart, topProductsBarChart, trendsChart;
 
-function renderStats(){
+// Toggle tra Statistiche Classiche e Analisi con AI
+document.addEventListener('DOMContentLoaded', () => {
+  const classicTab = document.getElementById('classicStatsTab');
+  const aiTab = document.getElementById('aiStatsTab');
+  const classicSection = document.getElementById('classicStatsSection');
+  const aiSection = document.getElementById('aiStatsSection');
+  if (classicTab && aiTab && classicSection && aiSection) {
+    classicTab.addEventListener('click', () => {
+      classicTab.classList.add('active');
+      aiTab.classList.remove('active');
+      classicSection.style.display = '';
+      aiSection.style.display = 'none';
+    });
+    aiTab.addEventListener('click', () => {
+      aiTab.classList.add('active');
+      classicTab.classList.remove('active');
+      aiSection.style.display = '';
+      classicSection.style.display = 'none';
+    });
+  }
+});
+
+function renderStats() {
+  renderSupplierPieChart();
+  renderTopProductsBarChart();
+  renderLabStatsCards();
+  // --- STATISTICHE CON AI (mantiene la logica esistente, se serve) ---
   const statsProduct = document.getElementById('statsProduct');
-  
-  // Verifica che l'elemento select esista
-  if (!statsProduct) {
-    console.warn('Elemento statsProduct non trovato nel DOM');
+  if (!statsProduct) return;
+}
+
+function renderPriceDistChart() {
+  const ctx = document.getElementById('priceDistChart');
+  if (!ctx) return;
+  // Distribuzione prezzi (istogramma)
+  const prices = purchases.map(p => p.price).filter(x => typeof x === 'number' && !isNaN(x));
+  if (!prices.length) return;
+  // Crea bins
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const binCount = 7;
+  const binSize = (max - min) / binCount || 1;
+  const bins = Array(binCount).fill(0);
+  prices.forEach(price => {
+    let idx = Math.floor((price - min) / binSize);
+    if (idx >= binCount) idx = binCount - 1;
+    bins[idx]++;
+  });
+  const labels = bins.map((_,i) => `€${(min + i*binSize).toFixed(2)} - €${(min + (i+1)*binSize).toFixed(2)}`);
+  if (window.priceDistChartObj) window.priceDistChartObj.destroy();
+  window.priceDistChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Frequenza',
+        data: bins,
+        backgroundColor: '#60a5fa',
+        borderRadius: 8,
+        maxBarThickness: 38
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `N° acquisti: ${ctx.parsed.y}` } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 12 } } },
+        y: { beginAtZero: true, ticks: { font: { size: 13 } } }
+      }
+    }
+  });
+}
+
+function renderLabStatsCards() {
+  // Aggiorna le card statistiche formali
+  const totalSpent = purchases.reduce((sum,p)=>sum+(p.price*(p.quantity||1)),0);
+  const supplierTotals = {};
+  const productTotals = {};
+  purchases.forEach(p => {
+    if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
+    supplierTotals[p.supplier] += p.price * (p.quantity || 1);
+    if (!productTotals[p.product]) productTotals[p.product] = 0;
+    productTotals[p.product] += p.quantity || 1;
+  });
+  const topSupplier = Object.entries(supplierTotals).sort((a,b)=>b[1]-a[1])[0];
+  const topProduct = Object.entries(productTotals).sort((a,b)=>b[1]-a[1])[0];
+  const avgSpent = purchases.length ? (totalSpent / purchases.length) : 0;
+  const statTotalSpent = document.getElementById('statTotalSpent');
+  const statTopSupplier = document.getElementById('statTopSupplier');
+  const statTopProduct = document.getElementById('statTopProduct');
+  const statAvgSpent = document.getElementById('statAvgSpent');
+  if (statTotalSpent) statTotalSpent.textContent = `€ ${totalSpent.toFixed(2)}`;
+  if (statTopSupplier) statTopSupplier.textContent = topSupplier ? `${topSupplier[0]} (€ ${topSupplier[1].toFixed(2)})` : '-';
+  if (statTopProduct) statTopProduct.textContent = topProduct ? `${topProduct[0]} (${topProduct[1]} unità)` : '-';
+  if (statAvgSpent) statAvgSpent.textContent = `€ ${avgSpent.toFixed(2)}`;
+}
+
+function renderMonthlyTrendChart() {
+  const ctx = document.getElementById('monthlyTrendChart');
+  if (!ctx) return;
+  // Raggruppa per mese
+  const monthlyData = {};
+  purchases.forEach(p => {
+    const monthKey = p.date.slice(0, 7); // YYYY-MM
+    if (!monthlyData[monthKey]) monthlyData[monthKey] = 0;
+    monthlyData[monthKey] += p.price * (p.quantity || 1);
+  });
+  const sortedMonths = Object.keys(monthlyData).sort();
+  const values = sortedMonths.map(m => monthlyData[m]);
+  const labels = sortedMonths.map(m => {
+    const [year, month] = m.split('-');
+    const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    return `${monthNames[parseInt(month) - 1]} '${year.slice(2)}`;
+  });
+  if (window.monthlyTrendChartObj) window.monthlyTrendChartObj.destroy();
+  window.monthlyTrendChartObj = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Spesa Mensile (€)',
+        data: values,
+        backgroundColor: 'rgba(47,125,101,0.13)',
+        borderColor: '#2f7d65',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#2f7d65',
+        pointBorderColor: '#17624a',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#60a5fa',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `Spesa: €${ctx.parsed.y.toFixed(2)}` } }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { font: { size: 11 } } },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderAvgQualityChart() {
+  const ctx = document.getElementById('avgQualityChart');
+  if (!ctx) return;
+  // Calcola media qualità per prodotto
+  const qualityMap = {};
+  const countMap = {};
+  purchases.forEach(p => {
+    if (!qualityMap[p.product]) { qualityMap[p.product] = 0; countMap[p.product] = 0; }
+    qualityMap[p.product] += p.rating || 0;
+    countMap[p.product] += 1;
+  });
+  const avgQuality = Object.keys(qualityMap).map(prod => ({
+    product: prod,
+    avg: countMap[prod] ? (qualityMap[prod] / countMap[prod]) : 0
+  }));
+  // Top 7 prodotti per media qualità
+  const sorted = avgQuality.sort((a,b)=>b.avg-a.avg).slice(0,7);
+  const labels = sorted.map(x=>x.product);
+  const data = sorted.map(x=>x.avg);
+  if (window.avgQualityChartObj) window.avgQualityChartObj.destroy();
+  window.avgQualityChartObj = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Media Qualità',
+        data,
+        backgroundColor: '#6366f1',
+        borderRadius: 8,
+        maxBarThickness: 38
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `Qualità media: ${ctx.parsed.x.toFixed(2)}` } }
+      },
+      scales: {
+        x: { beginAtZero: true, min: 0, max: 5, ticks: { font: { size: 12 }, stepSize: 1 } },
+        y: { ticks: { font: { size: 13 } } }
+      }
+    }
+  });
+}
+
+function renderClassicStatsCards() {
+  // Aggiorna le card statistiche
+  const totalSpent = purchases.reduce((sum,p)=>sum+(p.price*(p.quantity||1)),0);
+  const supplierTotals = {};
+  const productTotals = {};
+  purchases.forEach(p => {
+    if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
+    supplierTotals[p.supplier] += p.price * (p.quantity || 1);
+    if (!productTotals[p.product]) productTotals[p.product] = 0;
+    productTotals[p.product] += p.quantity || 1;
+  });
+  const topSupplier = Object.entries(supplierTotals).sort((a,b)=>b[1]-a[1])[0];
+  const topProduct = Object.entries(productTotals).sort((a,b)=>b[1]-a[1])[0];
+  const avgSpent = purchases.length ? (totalSpent / purchases.length) : 0;
+  const statTotalSpent = document.getElementById('statTotalSpent');
+  const statTopSupplier = document.getElementById('statTopSupplier');
+  const statTopProduct = document.getElementById('statTopProduct');
+  const statAvgSpent = document.getElementById('statAvgSpent');
+  if (statTotalSpent) statTotalSpent.textContent = `€ ${totalSpent.toFixed(2)}`;
+  if (statTopSupplier) statTopSupplier.textContent = topSupplier ? `${topSupplier[0]} (€ ${topSupplier[1].toFixed(2)})` : '-';
+  if (statTopProduct) statTopProduct.textContent = topProduct ? `${topProduct[0]} (${topProduct[1]} unità)` : '-';
+  if (statAvgSpent) statAvgSpent.textContent = `€ ${avgSpent.toFixed(2)}`;
+}
+
+function renderSupplierPieChart() {
+  const ctx = document.getElementById('supplierPieChart');
+  if (!ctx) return;
+  // Calcola spese totali per fornitore
+  const supplierTotals = {};
+  purchases.forEach(p => {
+    if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
+    supplierTotals[p.supplier] += p.price * (p.quantity || 1);
+  });
+  const labels = Object.keys(supplierTotals);
+  const data = Object.values(supplierTotals);
+  if (supplierPieChart) supplierPieChart.destroy();
+  supplierPieChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: [
+          '#2f7d65','#fbbf24','#6366f1','#f472b6','#60a5fa','#f87171','#34d399','#a78bfa','#facc15','#fb7185'
+        ],
+        borderWidth: 1.5
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 13 } } },
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.parsed.toFixed(2)}` } }
+      }
+    }
+  });
+}
+
+function renderTopProductsBarChart() {
+  const ctx = document.getElementById('topProductsBarChart');
+  if (!ctx) return;
+  // Conta quantità acquistate per prodotto
+  const productTotals = {};
+  purchases.forEach(p => {
+    if (!productTotals[p.product]) productTotals[p.product] = 0;
+    productTotals[p.product] += p.quantity || 1;
+  });
+  // Prendi i top 7 prodotti
+  const sorted = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const labels = sorted.map(x=>x[0]);
+  const data = sorted.map(x=>x[1]);
+  if (topProductsBarChart) topProductsBarChart.destroy();
+  topProductsBarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Quantità acquistata',
+        data,
+        backgroundColor: '#2f7d65',
+        borderRadius: 8,
+        maxBarThickness: 38
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `Quantità: ${ctx.parsed.x}` } }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { font: { size: 12 } } },
+        y: { ticks: { font: { size: 13 } } }
+      }
+    }
+  });
+}
+
+function renderClassicStatsSummary() {
+  const el = document.getElementById('classicStatsSummary');
+  if (!el) return;
+  // Calcola riepilogo: spesa totale, fornitore top, prodotto top, acquisto medio
+  if (!purchases.length) {
+    el.innerHTML = '<li>Nessun dato disponibile</li>';
     return;
   }
-  
-  // La pagina statistiche ora usa solo l'analisi AI
-  // Non ci sono più grafici o statistiche da renderizzare qui
-  console.log('✅ Pagina statistiche pronta, prodotto selezionato:', statsProduct.value);
+  const totalSpent = purchases.reduce((sum,p)=>sum+(p.price*(p.quantity||1)),0);
+  const supplierTotals = {};
+  const productTotals = {};
+  purchases.forEach(p => {
+    if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
+    supplierTotals[p.supplier] += p.price * (p.quantity || 1);
+    if (!productTotals[p.product]) productTotals[p.product] = 0;
+    productTotals[p.product] += p.quantity || 1;
+  });
+  const topSupplier = Object.entries(supplierTotals).sort((a,b)=>b[1]-a[1])[0];
+  const topProduct = Object.entries(productTotals).sort((a,b)=>b[1]-a[1])[0];
+  const avgSpent = totalSpent / purchases.length;
+  el.innerHTML = `
+    <li>Spesa totale: <strong>€ ${totalSpent.toFixed(2)}</strong></li>
+    <li>Fornitore top: <strong>${topSupplier ? topSupplier[0] : '-'}</strong> (€ ${topSupplier ? topSupplier[1].toFixed(2) : '0'})</li>
+    <li>Prodotto più acquistato: <strong>${topProduct ? topProduct[0] : '-'}</strong> (${topProduct ? topProduct[1] : '0'} unità)</li>
+    <li>Spesa media per acquisto: <strong>€ ${avgSpent.toFixed(2)}</strong></li>
+  `;
 }
 
 /* EXPORT */

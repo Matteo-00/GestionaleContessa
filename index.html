@@ -253,35 +253,74 @@
   </div>
 </section>
 
-<!-- STATISTICHE CON AI -->
+
+<!-- STATISTICHE -->
 <section id="page-stats" class="page">
   <div class="card">
-    <h2>Analisi Intelligente Prodotti </h2>
-    <p class="subtitle">L'AI confronta tutti gli acquisti e ti consiglia il migliore</p>
 
-    <div class="filters">
-      <select id="statsProduct" class="fixed-select">
-        <option value="">Seleziona un prodotto</option>
-      </select>
-      <select id="statsSupplier" class="fixed-select">
-        <option value="">Tutti i fornitori</option>
-      </select>
+    <div class="stats-tabs-wrapper">
+      <div class="stats-tabs">
+        <button id="classicStatsTab" class="stats-tab active" type="button">Statistiche</button>
+        <button id="aiStatsTab" class="stats-tab" type="button">Analisi con AI</button>
+      </div>
     </div>
 
-    <!-- Pulsante Analizza con AI -->
-    <button id="analyzeWithAI" class="ai-analyze-btn" disabled>
-      <span class="ai-icon">✨</span>
-      <span>Analizza con AI</span>
-    </button>
-
-    <!-- Loading -->
-    <div id="aiLoading" class="ai-loading" style="display:none;">
-      <div class="loading-spinner"></div>
-      <p>L'AI sta analizzando tutti gli acquisti...</p>
+    <!-- SEZIONE STATISTICHE -->
+    <div id="classicStatsSection">
+      <h2 style="margin-bottom:0.2rem;">Statistiche Magazzino</h2>
+      <p class="subtitle" style="margin-bottom:1.2rem;">Dati, grafici e riepiloghi su fornitori e prodotti</p>
+      <div class="classic-stats-flex stats-2charts-layout">
+        <div class="classic-stats-charts stats-2charts">
+          <div class="stats-chart-tile big">
+            <h3>Spese per Fornitore</h3>
+            <canvas id="supplierPieChart" height="340" width="340"></canvas>
+          </div>
+          <div class="stats-chart-tile big">
+            <h3>Prodotti più Acquistati</h3>
+            <canvas id="topProductsBarChart" height="340" width="440"></canvas>
+          </div>
+        </div>
+        <div class="classic-stats-summary chicchette card-stats stats-lab-beauty">
+          <div class="stat-card lab-beauty"><span class="stat-icon">💶</span><div><div class="stat-label">Totale Speso</div><div class="stat-value" id="statTotalSpent"></div></div></div>
+          <div class="stat-card lab-beauty"><span class="stat-icon">🏭</span><div><div class="stat-label">Fornitore Principale</div><div class="stat-value" id="statTopSupplier"></div></div></div>
+          <div class="stat-card lab-beauty"><span class="stat-icon">📦</span><div><div class="stat-label">Prodotto Top</div><div class="stat-value" id="statTopProduct"></div></div></div>
+          <div class="stat-card lab-beauty"><span class="stat-icon">📊</span><div><div class="stat-label">Spesa Media</div><div class="stat-value" id="statAvgSpent"></div></div></div>
+        </div>
+      </div>
     </div>
 
-    <!-- Risultati AI -->
-    <div id="aiResults" class="ai-results" style="display:none;"></div>
+    <!-- SEZIONE STATISTICHE CON AI -->
+    <div id="aiStatsSection" style="display:none;">
+      <h2>Analisi Intelligente Prodotti </h2>
+      <p class="subtitle">L'AI confronta tutti gli acquisti e ti consiglia il migliore</p>
+      <div class="filters">
+        <select id="statsProduct" class="fixed-select">
+          <option value="">Seleziona un prodotto</option>
+        </select>
+        <select id="statsSupplier" class="fixed-select">
+          <option value="">Tutti i fornitori</option>
+        </select>
+      </div>
+      <div class="ai-intro">
+        <p>
+          L'analisi AI valuta tutti gli acquisti del prodotto selezionato e confronta i fornitori considerando:
+          <strong>prezzo unitario</strong>, <strong>qualità</strong>, <strong>rapporto qualità-prezzo</strong>, <strong>affidabilità del fornitore</strong> e <strong>note</strong>.
+          Riceverai una classifica dei migliori acquisti e un riepilogo per scegliere in modo intelligente.
+        </p>
+      </div>
+      <!-- Pulsante Analizza con AI -->
+      <button id="analyzeWithAI" class="ai-analyze-btn" disabled>
+        <span class="ai-icon">✨</span>
+        <span>Analizza con AI</span>
+      </button>
+      <!-- Loading -->
+      <div id="aiLoading" class="ai-loading" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p>L'AI sta analizzando tutti gli acquisti...</p>
+      </div>
+      <!-- Risultati AI -->
+      <div id="aiResults" class="ai-results" style="display:none;"></div>
+    </div>
   </div>
 </section>
 
