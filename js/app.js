@@ -360,7 +360,7 @@ savePurchase.onclick = async () => {
 };
 
 /* ARCHIVIO + PAGINAZIONE */
-let currentPage=1, perPage=20;
+let currentPage=1, perPage=8;
 
 function renderArchive(){
   let data=[...purchases];
@@ -405,7 +405,8 @@ function renderArchive(){
         <td style="white-space:nowrap;">
           <button class="view-stats-btn" data-product="${x.product}" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Statistiche</button>
           <button class="repurchase-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#2f7d65;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Acquista</button>
-          <button class="edit-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;">Modifica</button>
+          <button class="edit-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Modifica</button>
+          <button class="delete-btn" data-index="${actualIndex}" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Elimina</button>
         </td>
       </tr>`;
   });
@@ -475,6 +476,28 @@ function renderArchive(){
     };
   });
 
+  // Event listener per bottoni Elimina
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const index = parseInt(btn.dataset.index);
+      const id = btn.dataset.id;
+      const purchase = purchases[index];
+      
+      if (confirm(`Sei sicuro di voler eliminare definitivamente "${purchase.product}"?\nQuesta operazione non può essere annullata.`)) {
+        try {
+          await db.deletePurchase(id);
+          purchases.splice(index, 1);
+          renderArchive();
+          renderStats();
+          alert('Prodotto eliminato con successo');
+        } catch (err) {
+          console.error('Errore eliminazione:', err);
+          alert('Errore durante l\'eliminazione del prodotto');
+        }
+      }
+    };
+  });
+
   pageInfo.textContent=`Pagina ${currentPage} / ${pages}`;
 }
 
@@ -496,18 +519,21 @@ nextPage.onclick=()=>{
 /* STATISTICHE */
 let supplierPieChart, topProductsBarChart, trendsChart;
 
-// Toggle tra Statistiche Classiche e Analisi con AI
+// Toggle tra Analisi con AI e Statistiche (AI default)
 document.addEventListener('DOMContentLoaded', () => {
   const classicTab = document.getElementById('classicStatsTab');
   const aiTab = document.getElementById('aiStatsTab');
   const classicSection = document.getElementById('classicStatsSection');
   const aiSection = document.getElementById('aiStatsSection');
   if (classicTab && aiTab && classicSection && aiSection) {
+    // AI è default, quindi è già visibile
     classicTab.addEventListener('click', () => {
       classicTab.classList.add('active');
       aiTab.classList.remove('active');
       classicSection.style.display = '';
       aiSection.style.display = 'none';
+      // Rigenera i grafici quando si passa alla sezione statistiche
+      renderStats();
     });
     aiTab.addEventListener('click', () => {
       aiTab.classList.add('active');
@@ -519,13 +545,101 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderStats() {
+  // KPI Cards
+  renderKPICards();
+  // Grafici professionali - Solo quelli utili
   renderSupplierPieChart();
   renderTopProductsBarChart();
-  renderLabStatsCards();
+  renderMonthlyTrendChart();
+  renderAvgQualityChart();
+  renderSupplierFrequencyChart();
   // --- STATISTICHE CON AI (mantiene la logica esistente, se serve) ---
   const statsProduct = document.getElementById('statsProduct');
   if (!statsProduct) return;
 }
+
+// Nuove funzioni per KPI Cards
+function renderKPICards() {
+  if (!purchases.length) return;
+  const totalSpent = purchases.reduce((sum,p)=>sum+(p.price*(p.quantity||1)),0);
+  const uniqueSuppliers = new Set(purchases.map(p=>p.supplier)).size;
+  const uniqueProducts = new Set(purchases.map(p=>p.product)).size;
+  const avgPurchase = totalSpent / purchases.length;
+  
+  const kpiTotalSpent = document.getElementById('kpiTotalSpent');
+  const kpiSuppliers = document.getElementById('kpiSuppliers');
+  const kpiProducts = document.getElementById('kpiProducts');
+  const kpiAvgPurchase = document.getElementById('kpiAvgPurchase');
+  
+  if (kpiTotalSpent) kpiTotalSpent.textContent = `€ ${totalSpent.toFixed(2)}`;
+  if (kpiSuppliers) kpiSuppliers.textContent = uniqueSuppliers;
+  if (kpiProducts) kpiProducts.textContent = uniqueProducts;
+  if (kpiAvgPurchase) kpiAvgPurchase.textContent = `€ ${avgPurchase.toFixed(2)}`;
+}
+
+// Grafico: Frequenza Fornitori (Professionale)
+function renderSupplierFrequencyChart() {
+  const ctx = document.getElementById('supplierFrequencyChart');
+  if (!ctx) return;
+  const supplierFreq = {};
+  purchases.forEach(p => {
+    supplierFreq[p.supplier] = (supplierFreq[p.supplier] || 0) + 1;
+  });
+  const sorted = Object.entries(supplierFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const labels = sorted.map(x=>x[0]);
+  const data = sorted.map(x=>x[1]);
+  if (window.supplierFreqChart) window.supplierFreqChart.destroy();
+  window.supplierFreqChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Numero Ordini',
+        data,
+        backgroundColor: 'rgba(47,125,101,0.95)',
+        borderColor: '#1e5a45',
+        borderWidth: 2,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          padding: 12,
+          titleFont: { size: 13, weight: 600, family: 'Inter' },
+          bodyFont: { size: 12, family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `Ordini effettuati: ${ctx.parsed.x}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { 
+            font: { size: 13, family: 'Inter', weight: 600 },
+            color: '#000000'
+          },
+          grid: { color: 'rgba(0,0,0,0.1)' }
+        },
+        y: {
+          ticks: { 
+            font: { size: 14, family: 'Inter', weight: 600 },
+            color: '#000000'
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// Rimuovi renderQualityPriceRatioChart - non più necessario
 
 function renderPriceDistChart() {
   const ctx = document.getElementById('priceDistChart');
@@ -620,27 +734,52 @@ function renderMonthlyTrendChart() {
       datasets: [{
         label: 'Spesa Mensile (€)',
         data: values,
-        backgroundColor: 'rgba(47,125,101,0.13)',
-        borderColor: '#2f7d65',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#2f7d65',
-        pointBorderColor: '#17624a',
-        pointBorderWidth: 1.5,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#60a5fa',
-        tension: 0.4,
+        backgroundColor: 'rgba(47,125,101,0.2)',
+        borderColor: '#1e5a45',
+        borderWidth: 3,
+        pointBackgroundColor: '#1e5a45',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        pointHoverBackgroundColor: '#17624a',
+        pointHoverBorderColor: '#ffffff',
+        tension: 0.3,
         fill: true
       }]
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `Spesa: €${ctx.parsed.y.toFixed(2)}` } }
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          padding: 12,
+          titleFont: { size: 13, weight: 600, family: 'Inter' },
+          bodyFont: { size: 12, family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `Spesa: €${ctx.parsed.y.toFixed(2)}`
+          }
+        }
       },
       scales: {
-        y: { beginAtZero: true, ticks: { font: { size: 11 } } },
-        x: { ticks: { font: { size: 11 } } }
+        y: {
+          beginAtZero: true,
+          ticks: {
+            font: { size: 13, family: 'Inter', weight: 600 },
+            color: '#000000',
+            callback: (value) => '€' + value.toFixed(0)
+          },
+          grid: { color: 'rgba(0,0,0,0.1)' }
+        },
+        x: {
+          ticks: {
+            font: { size: 13, family: 'Inter', weight: 600 },
+            color: '#000000'
+          },
+          grid: { display: false }
+        }
       }
     }
   });
@@ -661,8 +800,8 @@ function renderAvgQualityChart() {
     product: prod,
     avg: countMap[prod] ? (qualityMap[prod] / countMap[prod]) : 0
   }));
-  // Top 7 prodotti per media qualità
-  const sorted = avgQuality.sort((a,b)=>b.avg-a.avg).slice(0,7);
+  // Top 10 prodotti per media qualità
+  const sorted = avgQuality.filter(x => x.avg > 0).sort((a,b)=>b.avg-a.avg).slice(0,10);
   const labels = sorted.map(x=>x.product);
   const data = sorted.map(x=>x.avg);
   if (window.avgQualityChartObj) window.avgQualityChartObj.destroy();
@@ -671,22 +810,49 @@ function renderAvgQualityChart() {
     data: {
       labels,
       datasets: [{
-        label: 'Media Qualità',
+        label: 'Valutazione Media',
         data,
-        backgroundColor: '#6366f1',
-        borderRadius: 8,
-        maxBarThickness: 38
+        backgroundColor: 'rgba(251,191,36,0.95)',
+        borderColor: '#d97706',
+        borderWidth: 2,
+        borderRadius: 4
       }]
     },
     options: {
       indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `Qualità media: ${ctx.parsed.x.toFixed(2)}` } }
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          padding: 12,
+          titleFont: { size: 13, weight: 600, family: 'Inter' },
+          bodyFont: { size: 12, family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `Qualità: ${ctx.parsed.x.toFixed(2)}/5 ★`
+          }
+        }
       },
       scales: {
-        x: { beginAtZero: true, min: 0, max: 5, ticks: { font: { size: 12 }, stepSize: 1 } },
-        y: { ticks: { font: { size: 13 } } }
+        x: {
+          beginAtZero: true,
+          min: 0,
+          max: 5,
+          ticks: {
+            font: { size: 13, family: 'Inter', weight: 600 },
+            color: '#000000',
+            stepSize: 1
+          },
+          grid: { color: 'rgba(0,0,0,0.1)' }
+        },
+        y: {
+          ticks: {
+            font: { size: 14, family: 'Inter', weight: 600 },
+            color: '#000000'
+          },
+          grid: { display: false }
+        }
       }
     }
   });
@@ -729,21 +895,43 @@ function renderSupplierPieChart() {
   const data = Object.values(supplierTotals);
   if (supplierPieChart) supplierPieChart.destroy();
   supplierPieChart = new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
       labels,
       datasets: [{
         data,
         backgroundColor: [
-          '#2f7d65','#fbbf24','#6366f1','#f472b6','#60a5fa','#f87171','#34d399','#a78bfa','#facc15','#fb7185'
+          'rgba(47,125,101,0.95)','rgba(251,191,36,0.95)','rgba(99,102,241,0.95)',
+          'rgba(244,114,182,0.95)','rgba(96,165,250,0.95)','rgba(248,113,113,0.95)',
+          'rgba(52,211,153,0.95)','rgba(167,139,250,0.95)','rgba(250,204,21,0.95)','rgba(251,113,133,0.95)'
         ],
-        borderWidth: 1.5
+        borderColor: '#ffffff',
+        borderWidth: 3
       }]
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 13 } } },
-        tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.parsed.toFixed(2)}` } }
+        legend: {
+          position: 'right',
+          labels: {
+            font: { size: 14, family: 'Inter', weight: 600 },
+            color: '#000000',
+            padding: 18,
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          padding: 12,
+          titleFont: { size: 13, weight: 600, family: 'Inter' },
+          bodyFont: { size: 12, family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `${ctx.label}: €${ctx.parsed.toFixed(2)} (${((ctx.parsed/data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`
+          }
+        }
       }
     }
   });
@@ -758,8 +946,8 @@ function renderTopProductsBarChart() {
     if (!productTotals[p.product]) productTotals[p.product] = 0;
     productTotals[p.product] += p.quantity || 1;
   });
-  // Prendi i top 7 prodotti
-  const sorted = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  // Prendi i top 10 prodotti
+  const sorted = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const labels = sorted.map(x=>x[0]);
   const data = sorted.map(x=>x[1]);
   if (topProductsBarChart) topProductsBarChart.destroy();
@@ -768,22 +956,46 @@ function renderTopProductsBarChart() {
     data: {
       labels,
       datasets: [{
-        label: 'Quantità acquistata',
+        label: 'Quantità Totale',
         data,
-        backgroundColor: '#2f7d65',
-        borderRadius: 8,
-        maxBarThickness: 38
+        backgroundColor: 'rgba(47,125,101,0.95)',
+        borderColor: '#1e5a45',
+        borderWidth: 2,
+        borderRadius: 4
       }]
     },
     options: {
       indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `Quantità: ${ctx.parsed.x}` } }
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          padding: 12,
+          titleFont: { size: 13, weight: 600, family: 'Inter' },
+          bodyFont: { size: 12, family: 'Inter' },
+          callbacks: {
+            label: (ctx) => `Quantità: ${ctx.parsed.x} unità`
+          }
+        }
       },
       scales: {
-        x: { beginAtZero: true, ticks: { font: { size: 12 } } },
-        y: { ticks: { font: { size: 13 } } }
+        x: {
+          beginAtZero: true,
+          ticks: {
+            font: { size: 13, family: 'Inter', weight: 600 },
+            color: '#000000'
+          },
+          grid: { color: 'rgba(0,0,0,0.1)' }
+        },
+        y: {
+          ticks: {
+            font: { size: 14, family: 'Inter', weight: 600 },
+            color: '#000000'
+          },
+          grid: { display: false }
+        }
       }
     }
   });

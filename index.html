@@ -260,37 +260,13 @@
 
     <div class="stats-tabs-wrapper">
       <div class="stats-tabs">
-        <button id="classicStatsTab" class="stats-tab active" type="button">Statistiche</button>
-        <button id="aiStatsTab" class="stats-tab" type="button">Analisi con AI</button>
+        <button id="aiStatsTab" class="stats-tab active" type="button">Analisi con AI</button>
+        <button id="classicStatsTab" class="stats-tab" type="button">Statistiche</button>
       </div>
     </div>
 
-    <!-- SEZIONE STATISTICHE -->
-    <div id="classicStatsSection">
-      <h2 style="margin-bottom:0.2rem;">Statistiche Magazzino</h2>
-      <p class="subtitle" style="margin-bottom:1.2rem;">Dati, grafici e riepiloghi su fornitori e prodotti</p>
-      <div class="classic-stats-flex stats-2charts-layout">
-        <div class="classic-stats-charts stats-2charts">
-          <div class="stats-chart-tile big">
-            <h3>Spese per Fornitore</h3>
-            <canvas id="supplierPieChart" height="340" width="340"></canvas>
-          </div>
-          <div class="stats-chart-tile big">
-            <h3>Prodotti più Acquistati</h3>
-            <canvas id="topProductsBarChart" height="340" width="440"></canvas>
-          </div>
-        </div>
-        <div class="classic-stats-summary chicchette card-stats stats-lab-beauty">
-          <div class="stat-card lab-beauty"><span class="stat-icon">💶</span><div><div class="stat-label">Totale Speso</div><div class="stat-value" id="statTotalSpent"></div></div></div>
-          <div class="stat-card lab-beauty"><span class="stat-icon">🏭</span><div><div class="stat-label">Fornitore Principale</div><div class="stat-value" id="statTopSupplier"></div></div></div>
-          <div class="stat-card lab-beauty"><span class="stat-icon">📦</span><div><div class="stat-label">Prodotto Top</div><div class="stat-value" id="statTopProduct"></div></div></div>
-          <div class="stat-card lab-beauty"><span class="stat-icon">📊</span><div><div class="stat-label">Spesa Media</div><div class="stat-value" id="statAvgSpent"></div></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SEZIONE STATISTICHE CON AI -->
-    <div id="aiStatsSection" style="display:none;">
+    <!-- SEZIONE STATISTICHE CON AI (ora prima e default) -->
+    <div id="aiStatsSection">
       <h2>Analisi Intelligente Prodotti </h2>
       <p class="subtitle">L'AI confronta tutti gli acquisti e ti consiglia il migliore</p>
       <div class="filters">
@@ -320,6 +296,136 @@
       </div>
       <!-- Risultati AI -->
       <div id="aiResults" class="ai-results" style="display:none;"></div>
+    </div>
+
+    <!-- SEZIONE STATISTICHE (ora seconda) -->
+    <div id="classicStatsSection" style="display:none;">
+      <div class="stats-professional-header">
+        <h2>Dashboard Statistiche</h2>
+        <p class="subtitle">Analisi completa e reportistica del magazzino</p>
+      </div>
+      
+      <!-- KPI Cards Professionali -->
+      <div class="stats-kpi-professional">
+        <div class="kpi-pro-card">
+          <div class="kpi-pro-label">Spesa Totale</div>
+          <div class="kpi-pro-value" id="kpiTotalSpent">€ 0</div>
+        </div>
+        <div class="kpi-pro-card">
+          <div class="kpi-pro-label">Fornitori Attivi</div>
+          <div class="kpi-pro-value" id="kpiSuppliers">0</div>
+        </div>
+        <div class="kpi-pro-card">
+          <div class="kpi-pro-label">Prodotti Registrati</div>
+          <div class="kpi-pro-value" id="kpiProducts">0</div>
+        </div>
+        <div class="kpi-pro-card">
+          <div class="kpi-pro-label">Spesa Media</div>
+          <div class="kpi-pro-value" id="kpiAvgPurchase">€ 0</div>
+        </div>
+      </div>
+
+      <!-- Indice Navigabile dei Grafici -->
+      <div class="chart-index">
+        <h3 class="chart-index-title">Indice Grafici</h3>
+        <div class="chart-index-grid">
+          <a href="#chart-supplier-distribution" class="chart-index-item">
+            <span class="index-number">01</span>
+            <span class="index-name">Distribuzione Spese Fornitori</span>
+          </a>
+          <a href="#chart-top-products" class="chart-index-item">
+            <span class="index-number">02</span>
+            <span class="index-name">Prodotti più Acquistati</span>
+          </a>
+          <a href="#chart-monthly-trend" class="chart-index-item">
+            <span class="index-number">03</span>
+            <span class="index-name">Andamento Mensile Spese</span>
+          </a>
+          <a href="#chart-quality-analysis" class="chart-index-item">
+            <span class="index-number">04</span>
+            <span class="index-name">Analisi Qualità Prodotti</span>
+          </a>
+          <a href="#chart-supplier-frequency" class="chart-index-item">
+            <span class="index-number">05</span>
+            <span class="index-name">Frequenza Ordini Fornitori</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Grafici Professionali -->
+      <div class="charts-professional-container">
+        
+        <!-- Grafico 1: Distribuzione Spese Fornitori -->
+        <div class="chart-pro-card" id="chart-supplier-distribution">
+          <div class="chart-pro-header">
+            <div class="chart-pro-number">01</div>
+            <div class="chart-pro-info">
+              <h3>Distribuzione Spese per Fornitore</h3>
+              <p class="chart-description">Visualizzazione percentuale della spesa totale suddivisa per fornitore. Permette di identificare rapidamente i fornitori principali e la concentrazione degli acquisti.</p>
+            </div>
+          </div>
+          <div class="chart-pro-canvas">
+            <canvas id="supplierPieChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grafico 2: Top Prodotti -->
+        <div class="chart-pro-card" id="chart-top-products">
+          <div class="chart-pro-header">
+            <div class="chart-pro-number">02</div>
+            <div class="chart-pro-info">
+              <h3>Prodotti più Acquistati</h3>
+              <p class="chart-description">Classifica dei prodotti ordinati per quantità totale acquistata. Utile per identificare i prodotti a maggiore rotazione e pianificare gli ordini futuri.</p>
+            </div>
+          </div>
+          <div class="chart-pro-canvas">
+            <canvas id="topProductsBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grafico 3: Andamento Mensile -->
+        <div class="chart-pro-card chart-pro-wide" id="chart-monthly-trend">
+          <div class="chart-pro-header">
+            <div class="chart-pro-number">03</div>
+            <div class="chart-pro-info">
+              <h3>Andamento Mensile delle Spese</h3>
+              <p class="chart-description">Analisi temporale delle spese di acquisto per identificare trend, stagionalità e variazioni nel tempo. Supporta la pianificazione del budget e l'analisi dei costi.</p>
+            </div>
+          </div>
+          <div class="chart-pro-canvas">
+            <canvas id="monthlyTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grafico 4: Qualità Media -->
+        <div class="chart-pro-card" id="chart-quality-analysis">
+          <div class="chart-pro-header">
+            <div class="chart-pro-number">04</div>
+            <div class="chart-pro-info">
+              <h3>Analisi Qualità Prodotti</h3>
+              <p class="chart-description">Valutazione media della qualità per prodotto basata sulle valutazioni degli acquisti. Permette di confrontare la qualità percepita dei diversi prodotti e fornitori.</p>
+            </div>
+          </div>
+          <div class="chart-pro-canvas">
+            <canvas id="avgQualityChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grafico 5: Frequenza Fornitori -->
+        <div class="chart-pro-card" id="chart-supplier-frequency">
+          <div class="chart-pro-header">
+            <div class="chart-pro-number">05</div>
+            <div class="chart-pro-info">
+              <h3>Frequenza Ordini per Fornitore</h3>
+              <p class="chart-description">Numero di transazioni effettuate con ciascun fornitore. Misura l'affidabilità e la frequenza di utilizzo dei diversi fornitori nel periodo analizzato.</p>
+            </div>
+          </div>
+          <div class="chart-pro-canvas">
+            <canvas id="supplierFrequencyChart"></canvas>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 </section>
