@@ -355,14 +355,14 @@
 
       <!-- Username -->
       <div class="form-group">
-        <label class="form-label" for="username">Username</label>
+        <label class="form-label" for="username">Email</label>
         <input 
-          type="text" 
+          type="email" 
           id="username" 
           name="username" 
           class="form-input" 
-          placeholder="Inserisci username"
-          autocomplete="username"
+          placeholder="Inserisci la tua email"
+          autocomplete="email"
           required
         >
       </div>
@@ -437,11 +437,11 @@
     errorMessage.classList.remove('show');
     
     // Get values
-    const username = usernameInput.value.trim();
+    const email = usernameInput.value.trim();
     const password = passwordInput.value;
 
-    if (!username || !password) {
-      showError('Inserisci username e password');
+    if (!email || !password) {
+      showError('Inserisci email e password');
       return;
     }
 
@@ -450,41 +450,40 @@
     loginBtn.disabled = true;
 
     try {
-      // Query Supabase per verificare le credenziali
-      // Prima recuperiamo tutti gli utenti, poi filtriamo lato client
-      const { data: users, error } = await supabaseClient
-        .from('Utenti')
-        .select('*');
+      // 🔒 SUPABASE AUTH - Login sicuro con password hashate
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
 
       if (error) {
-        console.error('Errore Supabase:', error);
-        showError('Errore di connessione al database');
+        console.error('Errore login completo:', error);
+        console.log('Messaggio errore:', error.message);
+        console.log('Status:', error.status);
+        
+        if (error.message.includes('Invalid login credentials') || error.message.includes('Invalid')) {
+          showError('Email o password non corretti');
+        } else if (error.message.includes('Email not confirmed') || error.message.includes('not confirmed')) {
+          showError('Email non confermata. Controlla la tua casella email o disabilita conferma email su Supabase');
+        } else if (error.status === 400) {
+          showError('Email non confermata. Vai su Supabase → Authentication → Users → clicca sull\'utente → Confirm email');
+        } else {
+          showError(`Errore: ${error.message}`);
+        }
         return;
       }
 
-      // Cerca l'utente con username corrispondente (case insensitive)
-      const user = users?.find(u => 
-        u.UserName === username || 
-        u.username === username ||
-        u.Username === username
-      );
-
-      if (!user) {
-        showError('Username non trovato');
+      if (!data || !data.user) {
+        showError('Errore di autenticazione. Riprova.');
         return;
       }
 
-      // Verifica password (controlla vari nomi possibili del campo)
-      const userPassword = user.Password || user.password;
-      if (userPassword !== password) {
-        showError('Password non corretta');
-        return;
-      }
-
-      // Login riuscito!
+      // Login riuscito! Salva sessione sicura
+      const user = data.user;
       sessionStorage.setItem('isLoggedIn', 'true');
-      sessionStorage.setItem('username', username);
+      sessionStorage.setItem('userEmail', user.email);
       sessionStorage.setItem('userId', user.id);
+      sessionStorage.setItem('accessToken', data.session.access_token);
 
       // Nascondi subito la pagina di login per evitare flicker
       document.querySelector('.login-container').style.display = 'none';

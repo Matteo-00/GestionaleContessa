@@ -10,7 +10,8 @@
 
   <!-- Protezione accesso: redirect a login se non autenticato -->
   <script>
-    if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+    // Verifica autenticazione
+    if (sessionStorage.getItem('isLoggedIn') !== 'true' || !sessionStorage.getItem('accessToken')) {
       window.location.href = 'login.html';
     }
   </script>
@@ -325,103 +326,50 @@
         </div>
       </div>
 
-      <!-- Indice Navigabile dei Grafici -->
-      <div class="chart-index">
-        <h3 class="chart-index-title">Indice Grafici</h3>
-        <div class="chart-index-grid">
-          <a href="#chart-supplier-distribution" class="chart-index-item">
-            <span class="index-number">01</span>
-            <span class="index-name">Distribuzione Spese Fornitori</span>
-          </a>
-          <a href="#chart-top-products" class="chart-index-item">
-            <span class="index-number">02</span>
-            <span class="index-name">Prodotti più Acquistati</span>
-          </a>
-          <a href="#chart-monthly-trend" class="chart-index-item">
-            <span class="index-number">03</span>
-            <span class="index-name">Andamento Mensile Spese</span>
-          </a>
-          <a href="#chart-quality-analysis" class="chart-index-item">
-            <span class="index-number">04</span>
-            <span class="index-name">Analisi Qualità Prodotti</span>
-          </a>
-          <a href="#chart-supplier-frequency" class="chart-index-item">
-            <span class="index-number">05</span>
-            <span class="index-name">Frequenza Ordini Fornitori</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Grafici Professionali -->
-      <div class="charts-professional-container">
+      <!-- Grafici Professionali con stile coerente -->
+      <div class="stats-charts-grid">
         
-        <!-- Grafico 1: Distribuzione Spese Fornitori -->
-        <div class="chart-pro-card" id="chart-supplier-distribution">
-          <div class="chart-pro-header">
-            <div class="chart-pro-number">01</div>
-            <div class="chart-pro-info">
-              <h3>Distribuzione Spese per Fornitore</h3>
-              <p class="chart-description">Visualizzazione percentuale della spesa totale suddivisa per fornitore. Permette di identificare rapidamente i fornitori principali e la concentrazione degli acquisti.</p>
-            </div>
+        <!-- Grafico 1: Andamento Spese Mensili -->
+        <div class="stats-chart-pill">
+          <div class="stats-chart-header">
+            <h3 class="stats-chart-title">Andamento Spese Mensili</h3>
+            <p class="stats-chart-subtitle">Analisi temporale delle spese nel tempo</p>
           </div>
-          <div class="chart-pro-canvas">
-            <canvas id="supplierPieChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Grafico 2: Top Prodotti -->
-        <div class="chart-pro-card" id="chart-top-products">
-          <div class="chart-pro-header">
-            <div class="chart-pro-number">02</div>
-            <div class="chart-pro-info">
-              <h3>Prodotti più Acquistati</h3>
-              <p class="chart-description">Classifica dei prodotti ordinati per quantità totale acquistata. Utile per identificare i prodotti a maggiore rotazione e pianificare gli ordini futuri.</p>
-            </div>
-          </div>
-          <div class="chart-pro-canvas">
-            <canvas id="topProductsBarChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Grafico 3: Andamento Mensile -->
-        <div class="chart-pro-card chart-pro-wide" id="chart-monthly-trend">
-          <div class="chart-pro-header">
-            <div class="chart-pro-number">03</div>
-            <div class="chart-pro-info">
-              <h3>Andamento Mensile delle Spese</h3>
-              <p class="chart-description">Analisi temporale delle spese di acquisto per identificare trend, stagionalità e variazioni nel tempo. Supporta la pianificazione del budget e l'analisi dei costi.</p>
-            </div>
-          </div>
-          <div class="chart-pro-canvas">
+          <div class="stats-chart-canvas">
             <canvas id="monthlyTrendChart"></canvas>
           </div>
         </div>
 
-        <!-- Grafico 4: Qualità Media -->
-        <div class="chart-pro-card" id="chart-quality-analysis">
-          <div class="chart-pro-header">
-            <div class="chart-pro-number">04</div>
-            <div class="chart-pro-info">
-              <h3>Analisi Qualità Prodotti</h3>
-              <p class="chart-description">Valutazione media della qualità per prodotto basata sulle valutazioni degli acquisti. Permette di confrontare la qualità percepita dei diversi prodotti e fornitori.</p>
-            </div>
+        <!-- Grafico 2: Spese per Fornitore -->
+        <div class="stats-chart-pill">
+          <div class="stats-chart-header">
+            <h3 class="stats-chart-title">Spese per Fornitore</h3>
+            <p class="stats-chart-subtitle">Distribuzione degli acquisti tra fornitori</p>
           </div>
-          <div class="chart-pro-canvas">
-            <canvas id="avgQualityChart"></canvas>
+          <div class="stats-chart-canvas">
+            <canvas id="supplierSpendingChart"></canvas>
           </div>
         </div>
 
-        <!-- Grafico 5: Frequenza Fornitori -->
-        <div class="chart-pro-card" id="chart-supplier-frequency">
-          <div class="chart-pro-header">
-            <div class="chart-pro-number">05</div>
-            <div class="chart-pro-info">
-              <h3>Frequenza Ordini per Fornitore</h3>
-              <p class="chart-description">Numero di transazioni effettuate con ciascun fornitore. Misura l'affidabilità e la frequenza di utilizzo dei diversi fornitori nel periodo analizzato.</p>
-            </div>
+        <!-- Grafico 3: Top Prodotti -->
+        <div class="stats-chart-pill">
+          <div class="stats-chart-header">
+            <h3 class="stats-chart-title">Prodotti Più Richiesti</h3>
+            <p class="stats-chart-subtitle">Classifica per quantità acquistata</p>
           </div>
-          <div class="chart-pro-canvas">
-            <canvas id="supplierFrequencyChart"></canvas>
+          <div class="stats-chart-canvas">
+            <canvas id="topProductsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grafico 4: Frequenza Ordini -->
+        <div class="stats-chart-pill">
+          <div class="stats-chart-header">
+            <h3 class="stats-chart-title">Frequenza Ordini</h3>
+            <p class="stats-chart-subtitle">Numero di ordini per fornitore</p>
+          </div>
+          <div class="stats-chart-canvas">
+            <canvas id="orderFrequencyChart"></canvas>
           </div>
         </div>
 
@@ -583,8 +531,14 @@
   
   <!-- Logout script -->
   <script>
-    document.getElementById('logoutBtn').addEventListener('click', () => {
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
       if (confirm('Vuoi effettuare il logout?')) {
+        // Logout sicuro da Supabase Auth
+        const supabaseUrl = 'https://zlyikcrrwjxmvoigqpdi.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpseWlrY3Jyd2p4bXZvaWdxcGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4NzIxMTEsImV4cCI6MjA4MzQ0ODExMX0.QaRjSOSWjq0zBZtIvM0fSgqJSgIxpfwaHEfyB-j-Q5w';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        await supabase.auth.signOut();
         sessionStorage.clear();
         window.location.href = 'login.html';
       }

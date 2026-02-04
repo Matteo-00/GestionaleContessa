@@ -2461,3 +2461,102 @@ h2 {
   
   .chart-description {
     font-size: 0.8rem;
+  }
+}
+
+/* ========================================
+   NUOVI STILI PER GRAFICI STATISTICHE
+   Stile coerente con il grafico home
+======================================== */
+
+.stats-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.2rem;
+  margin-top: 2rem;
+}
+
+.stats-chart-pill {
+  background: linear-gradient(135deg, rgba(115, 135, 142, 0.04) 0%, rgba(255,255,255,0.98) 100%);
+  border: 1px solid var(--border);
+  border-left: 3px solid #73878e;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-chart-pill:hover {
+  box-shadow: 0 4px 16px rgba(115, 135, 142, 0.15);
+  border-left-width: 4px;
+  transform: translateY(-2px);
+}
+
+.stats-chart-header {
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.stats-chart-title {
+  margin: 0 0 0.3rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.stats-chart-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.stats-chart-canvas {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-chart-canvas canvas {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Responsive per i nuovi grafici statistiche */
+@media (max-width: 768px) {
+  .stats-charts-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .stats-chart-p350px;
+    padding: 0.8rem;
+  }
+  
+  .stats-chart-title {
+    font-size: 0.85rem;
+  }
+  
+  .stats-chart-subtitle {
+    font-size: 0.7rem;
+  }
+  
+  .stats-chart-canvas {
+    min-height: 250px;
+    height: 25vas {
+    min-height: 200px;
+  }
+}

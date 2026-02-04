@@ -517,7 +517,7 @@ nextPage.onclick=()=>{
 }
 
 /* STATISTICHE */
-let supplierPieChart, topProductsBarChart, trendsChart;
+let trendsChart;
 
 // Toggle tra Analisi con AI e Statistiche (AI default)
 document.addEventListener('DOMContentLoaded', () => {
@@ -547,12 +547,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderStats() {
   // KPI Cards
   renderKPICards();
-  // Grafici professionali - Solo quelli utili
-  renderSupplierPieChart();
-  renderTopProductsBarChart();
-  renderMonthlyTrendChart();
-  renderAvgQualityChart();
-  renderSupplierFrequencyChart();
+  // Grafici professionali - Tutti con lo stile del grafico home
+  renderMonthlyTrendStatsChart();
+  renderSupplierSpendingStatsChart();
+  renderTopProductsStatsChart();
+  renderOrderFrequencyStatsChart();
   // --- STATISTICHE CON AI (mantiene la logica esistente, se serve) ---
   const statsProduct = document.getElementById('statsProduct');
   if (!statsProduct) return;
@@ -577,141 +576,13 @@ function renderKPICards() {
   if (kpiAvgPurchase) kpiAvgPurchase.textContent = `€ ${avgPurchase.toFixed(2)}`;
 }
 
-// Grafico: Frequenza Fornitori (Professionale)
-function renderSupplierFrequencyChart() {
-  const ctx = document.getElementById('supplierFrequencyChart');
-  if (!ctx) return;
-  const supplierFreq = {};
-  purchases.forEach(p => {
-    supplierFreq[p.supplier] = (supplierFreq[p.supplier] || 0) + 1;
-  });
-  const sorted = Object.entries(supplierFreq).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const labels = sorted.map(x=>x[0]);
-  const data = sorted.map(x=>x[1]);
-  if (window.supplierFreqChart) window.supplierFreqChart.destroy();
-  window.supplierFreqChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Numero Ordini',
-        data,
-        backgroundColor: 'rgba(47,125,101,0.95)',
-        borderColor: '#1e5a45',
-        borderWidth: 2,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          padding: 12,
-          titleFont: { size: 13, weight: 600, family: 'Inter' },
-          bodyFont: { size: 12, family: 'Inter' },
-          callbacks: {
-            label: (ctx) => `Ordini effettuati: ${ctx.parsed.x}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          ticks: { 
-            font: { size: 13, family: 'Inter', weight: 600 },
-            color: '#000000'
-          },
-          grid: { color: 'rgba(0,0,0,0.1)' }
-        },
-        y: {
-          ticks: { 
-            font: { size: 14, family: 'Inter', weight: 600 },
-            color: '#000000'
-          },
-          grid: { display: false }
-        }
-      }
-    }
-  });
-}
+// ===== GRAFICI STATISTICHE CON STILE DEL GRAFICO HOME =====
 
-// Rimuovi renderQualityPriceRatioChart - non più necessario
-
-function renderPriceDistChart() {
-  const ctx = document.getElementById('priceDistChart');
-  if (!ctx) return;
-  // Distribuzione prezzi (istogramma)
-  const prices = purchases.map(p => p.price).filter(x => typeof x === 'number' && !isNaN(x));
-  if (!prices.length) return;
-  // Crea bins
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const binCount = 7;
-  const binSize = (max - min) / binCount || 1;
-  const bins = Array(binCount).fill(0);
-  prices.forEach(price => {
-    let idx = Math.floor((price - min) / binSize);
-    if (idx >= binCount) idx = binCount - 1;
-    bins[idx]++;
-  });
-  const labels = bins.map((_,i) => `€${(min + i*binSize).toFixed(2)} - €${(min + (i+1)*binSize).toFixed(2)}`);
-  if (window.priceDistChartObj) window.priceDistChartObj.destroy();
-  window.priceDistChartObj = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Frequenza',
-        data: bins,
-        backgroundColor: '#60a5fa',
-        borderRadius: 8,
-        maxBarThickness: 38
-      }]
-    },
-    options: {
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `N° acquisti: ${ctx.parsed.y}` } }
-      },
-      scales: {
-        x: { ticks: { font: { size: 12 } } },
-        y: { beginAtZero: true, ticks: { font: { size: 13 } } }
-      }
-    }
-  });
-}
-
-function renderLabStatsCards() {
-  // Aggiorna le card statistiche formali
-  const totalSpent = purchases.reduce((sum,p)=>sum+(p.price*(p.quantity||1)),0);
-  const supplierTotals = {};
-  const productTotals = {};
-  purchases.forEach(p => {
-    if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
-    supplierTotals[p.supplier] += p.price * (p.quantity || 1);
-    if (!productTotals[p.product]) productTotals[p.product] = 0;
-    productTotals[p.product] += p.quantity || 1;
-  });
-  const topSupplier = Object.entries(supplierTotals).sort((a,b)=>b[1]-a[1])[0];
-  const topProduct = Object.entries(productTotals).sort((a,b)=>b[1]-a[1])[0];
-  const avgSpent = purchases.length ? (totalSpent / purchases.length) : 0;
-  const statTotalSpent = document.getElementById('statTotalSpent');
-  const statTopSupplier = document.getElementById('statTopSupplier');
-  const statTopProduct = document.getElementById('statTopProduct');
-  const statAvgSpent = document.getElementById('statAvgSpent');
-  if (statTotalSpent) statTotalSpent.textContent = `€ ${totalSpent.toFixed(2)}`;
-  if (statTopSupplier) statTopSupplier.textContent = topSupplier ? `${topSupplier[0]} (€ ${topSupplier[1].toFixed(2)})` : '-';
-  if (statTopProduct) statTopProduct.textContent = topProduct ? `${topProduct[0]} (${topProduct[1]} unità)` : '-';
-  if (statAvgSpent) statAvgSpent.textContent = `€ ${avgSpent.toFixed(2)}`;
-}
-
-function renderMonthlyTrendChart() {
+// Grafico 1: Andamento Spese Mensili (come il grafico home)
+function renderMonthlyTrendStatsChart() {
   const ctx = document.getElementById('monthlyTrendChart');
   if (!ctx) return;
+  
   // Raggruppa per mese
   const monthlyData = {};
   purchases.forEach(p => {
@@ -719,6 +590,7 @@ function renderMonthlyTrendChart() {
     if (!monthlyData[monthKey]) monthlyData[monthKey] = 0;
     monthlyData[monthKey] += p.price * (p.quantity || 1);
   });
+  
   const sortedMonths = Object.keys(monthlyData).sort();
   const values = sortedMonths.map(m => monthlyData[m]);
   const labels = sortedMonths.map(m => {
@@ -726,25 +598,26 @@ function renderMonthlyTrendChart() {
     const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     return `${monthNames[parseInt(month) - 1]} '${year.slice(2)}`;
   });
-  if (window.monthlyTrendChartObj) window.monthlyTrendChartObj.destroy();
-  window.monthlyTrendChartObj = new Chart(ctx, {
+  
+  if (window.monthlyTrendStatsChart) window.monthlyTrendStatsChart.destroy();
+  
+  window.monthlyTrendStatsChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
-        label: 'Spesa Mensile (€)',
+        label: 'Spesa (€)',
         data: values,
-        backgroundColor: 'rgba(47,125,101,0.2)',
-        borderColor: '#1e5a45',
-        borderWidth: 3,
-        pointBackgroundColor: '#1e5a45',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        pointHoverBackgroundColor: '#17624a',
-        pointHoverBorderColor: '#ffffff',
-        tension: 0.3,
+        backgroundColor: 'rgba(115, 135, 142, 0.2)',
+        borderColor: '#73878e',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#73878e',
+        pointBorderColor: '#5a6a71',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#8a9ba3',
+        tension: 0.4,
         fill: true
       }]
     },
@@ -754,12 +627,16 @@ function renderMonthlyTrendChart() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          padding: 12,
-          titleFont: { size: 13, weight: 600, family: 'Inter' },
-          bodyFont: { size: 12, family: 'Inter' },
+          backgroundColor: 'rgba(30, 58, 138, 0.95)',
+          padding: 10,
+          titleFont: { size: 12, weight: 'bold' },
+          bodyFont: { size: 11 },
+          cornerRadius: 6,
+          displayColors: false,
           callbacks: {
-            label: (ctx) => `Spesa: €${ctx.parsed.y.toFixed(2)}`
+            label: function(context) {
+              return 'Spesa: €' + context.parsed.y.toFixed(2);
+            }
           }
         }
       },
@@ -767,169 +644,176 @@ function renderMonthlyTrendChart() {
         y: {
           beginAtZero: true,
           ticks: {
-            font: { size: 13, family: 'Inter', weight: 600 },
-            color: '#000000',
-            callback: (value) => '€' + value.toFixed(0)
+            callback: function(value) {
+              return '€' + value.toFixed(0);
+            },
+            font: { size: 9 },
+            color: '#64748b'
           },
-          grid: { color: 'rgba(0,0,0,0.1)' }
+          grid: {
+            color: 'rgba(0, 0, 0, 0.04)',
+            drawBorder: false
+          }
         },
         x: {
           ticks: {
-            font: { size: 13, family: 'Inter', weight: 600 },
-            color: '#000000'
+            font: { size: 8 },
+            maxRotation: 45,
+            minRotation: 45,
+            color: '#64748b'
           },
           grid: { display: false }
-        }
-      }
-    }
-  });
-}
-
-function renderAvgQualityChart() {
-  const ctx = document.getElementById('avgQualityChart');
-  if (!ctx) return;
-  // Calcola media qualità per prodotto
-  const qualityMap = {};
-  const countMap = {};
-  purchases.forEach(p => {
-    if (!qualityMap[p.product]) { qualityMap[p.product] = 0; countMap[p.product] = 0; }
-    qualityMap[p.product] += p.rating || 0;
-    countMap[p.product] += 1;
-  });
-  const avgQuality = Object.keys(qualityMap).map(prod => ({
-    product: prod,
-    avg: countMap[prod] ? (qualityMap[prod] / countMap[prod]) : 0
-  }));
-  // Top 10 prodotti per media qualità
-  const sorted = avgQuality.filter(x => x.avg > 0).sort((a,b)=>b.avg-a.avg).slice(0,10);
-  const labels = sorted.map(x=>x.product);
-  const data = sorted.map(x=>x.avg);
-  if (window.avgQualityChartObj) window.avgQualityChartObj.destroy();
-  window.avgQualityChartObj = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Valutazione Media',
-        data,
-        backgroundColor: 'rgba(251,191,36,0.95)',
-        borderColor: '#d97706',
-        borderWidth: 2,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          padding: 12,
-          titleFont: { size: 13, weight: 600, family: 'Inter' },
-          bodyFont: { size: 12, family: 'Inter' },
-          callbacks: {
-            label: (ctx) => `Qualità: ${ctx.parsed.x.toFixed(2)}/5 ★`
-          }
         }
       },
-      scales: {
-        x: {
-          beginAtZero: true,
-          min: 0,
-          max: 5,
-          ticks: {
-            font: { size: 13, family: 'Inter', weight: 600 },
-            color: '#000000',
-            stepSize: 1
-          },
-          grid: { color: 'rgba(0,0,0,0.1)' }
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart',
+        onProgress: function(animation) {
+          const progress = animation.currentStep / animation.numSteps;
+          this.canvas.style.opacity = 0.3 + (progress * 0.7);
+        },
+        onComplete: function() {
+          this.canvas.style.opacity = 1;
+        }
+      },
+      animations: {
+        tension: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: 0,
+          to: 0.4,
+          loop: false
         },
         y: {
-          ticks: {
-            font: { size: 14, family: 'Inter', weight: 600 },
-            color: '#000000'
-          },
-          grid: { display: false }
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: (ctx) => {
+            if (ctx.type === 'data') {
+              return ctx.chart.scales.y.getPixelForValue(0);
+            }
+          }
         }
       }
     }
   });
 }
 
-function renderClassicStatsCards() {
-  // Aggiorna le card statistiche
-  const totalSpent = purchases.reduce((sum,p)=>sum+(p.price*(p.quantity||1)),0);
-  const supplierTotals = {};
-  const productTotals = {};
-  purchases.forEach(p => {
-    if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
-    supplierTotals[p.supplier] += p.price * (p.quantity || 1);
-    if (!productTotals[p.product]) productTotals[p.product] = 0;
-    productTotals[p.product] += p.quantity || 1;
-  });
-  const topSupplier = Object.entries(supplierTotals).sort((a,b)=>b[1]-a[1])[0];
-  const topProduct = Object.entries(productTotals).sort((a,b)=>b[1]-a[1])[0];
-  const avgSpent = purchases.length ? (totalSpent / purchases.length) : 0;
-  const statTotalSpent = document.getElementById('statTotalSpent');
-  const statTopSupplier = document.getElementById('statTopSupplier');
-  const statTopProduct = document.getElementById('statTopProduct');
-  const statAvgSpent = document.getElementById('statAvgSpent');
-  if (statTotalSpent) statTotalSpent.textContent = `€ ${totalSpent.toFixed(2)}`;
-  if (statTopSupplier) statTopSupplier.textContent = topSupplier ? `${topSupplier[0]} (€ ${topSupplier[1].toFixed(2)})` : '-';
-  if (statTopProduct) statTopProduct.textContent = topProduct ? `${topProduct[0]} (${topProduct[1]} unità)` : '-';
-  if (statAvgSpent) statAvgSpent.textContent = `€ ${avgSpent.toFixed(2)}`;
-}
-
-function renderSupplierPieChart() {
-  const ctx = document.getElementById('supplierPieChart');
+// Grafico 2: Spese per Fornitore (line chart come home)
+function renderSupplierSpendingStatsChart() {
+  const ctx = document.getElementById('supplierSpendingChart');
   if (!ctx) return;
+  
   // Calcola spese totali per fornitore
   const supplierTotals = {};
   purchases.forEach(p => {
     if (!supplierTotals[p.supplier]) supplierTotals[p.supplier] = 0;
     supplierTotals[p.supplier] += p.price * (p.quantity || 1);
   });
-  const labels = Object.keys(supplierTotals);
-  const data = Object.values(supplierTotals);
-  if (supplierPieChart) supplierPieChart.destroy();
-  supplierPieChart = new Chart(ctx, {
-    type: 'doughnut',
+  
+  const sorted = Object.entries(supplierTotals).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+  const labels = sorted.map(x=>x[0]);
+  const values = sorted.map(x=>x[1]);
+  
+  if (window.supplierSpendingStatsChart) window.supplierSpendingStatsChart.destroy();
+  
+  window.supplierSpendingStatsChart = new Chart(ctx, {
+    type: 'line',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
-        data,
-        backgroundColor: [
-          'rgba(47,125,101,0.95)','rgba(251,191,36,0.95)','rgba(99,102,241,0.95)',
-          'rgba(244,114,182,0.95)','rgba(96,165,250,0.95)','rgba(248,113,113,0.95)',
-          'rgba(52,211,153,0.95)','rgba(167,139,250,0.95)','rgba(250,204,21,0.95)','rgba(251,113,133,0.95)'
-        ],
-        borderColor: '#ffffff',
-        borderWidth: 3
+        label: 'Spesa (€)',
+        data: values,
+        backgroundColor: 'rgba(115, 135, 142, 0.2)',
+        borderColor: '#73878e',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#73878e',
+        pointBorderColor: '#5a6a71',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#8a9ba3',
+        tension: 0.4,
+        fill: true
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            font: { size: 14, family: 'Inter', weight: 600 },
-            color: '#000000',
-            padding: 18,
-            usePointStyle: true,
-            pointStyle: 'circle'
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(30, 58, 138, 0.95)',
+          padding: 10,
+          titleFont: { size: 12, weight: 'bold' },
+          bodyFont: { size: 11 },
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            label: function(context) {
+              return 'Spesa: €' + context.parsed.y.toFixed(2);
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '€' + value.toFixed(0);
+            },
+            font: { size: 9 },
+            color: '#64748b'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.04)',
+            drawBorder: false
           }
         },
-        tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          padding: 12,
-          titleFont: { size: 13, weight: 600, family: 'Inter' },
-          bodyFont: { size: 12, family: 'Inter' },
-          callbacks: {
-            label: (ctx) => `${ctx.label}: €${ctx.parsed.toFixed(2)} (${((ctx.parsed/data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`
+        x: {
+          ticks: {
+            font: { size: 8 },
+            maxRotation: 45,
+            minRotation: 45,
+            color: '#64748b'
+          },
+          grid: { display: false }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart',
+        onProgress: function(animation) {
+          const progress = animation.currentStep / animation.numSteps;
+          this.canvas.style.opacity = 0.3 + (progress * 0.7);
+        },
+        onComplete: function() {
+          this.canvas.style.opacity = 1;
+        }
+      },
+      animations: {
+        tension: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: 0,
+          to: 0.4,
+          loop: false
+        },
+        y: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: (ctx) => {
+            if (ctx.type === 'data') {
+              return ctx.chart.scales.y.getPixelForValue(0);
+            }
           }
         }
       }
@@ -937,69 +821,244 @@ function renderSupplierPieChart() {
   });
 }
 
-function renderTopProductsBarChart() {
-  const ctx = document.getElementById('topProductsBarChart');
+// Grafico 3: Top Prodotti (line chart come home)
+function renderTopProductsStatsChart() {
+  const ctx = document.getElementById('topProductsChart');
   if (!ctx) return;
+  
   // Conta quantità acquistate per prodotto
   const productTotals = {};
   purchases.forEach(p => {
     if (!productTotals[p.product]) productTotals[p.product] = 0;
     productTotals[p.product] += p.quantity || 1;
   });
-  // Prendi i top 10 prodotti
-  const sorted = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  
+  const sorted = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0, 5);
   const labels = sorted.map(x=>x[0]);
-  const data = sorted.map(x=>x[1]);
-  if (topProductsBarChart) topProductsBarChart.destroy();
-  topProductsBarChart = new Chart(ctx, {
-    type: 'bar',
+  const values = sorted.map(x=>x[1]);
+  
+  if (window.topProductsStatsChart) window.topProductsStatsChart.destroy();
+  
+  window.topProductsStatsChart = new Chart(ctx, {
+    type: 'line',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
-        label: 'Quantità Totale',
-        data,
-        backgroundColor: 'rgba(47,125,101,0.95)',
-        borderColor: '#1e5a45',
-        borderWidth: 2,
-        borderRadius: 4
+        label: 'Quantità',
+        data: values,
+        backgroundColor: 'rgba(115, 135, 142, 0.2)',
+        borderColor: '#73878e',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#73878e',
+        pointBorderColor: '#5a6a71',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#8a9ba3',
+        tension: 0.4,
+        fill: true
       }]
     },
     options: {
-      indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          padding: 12,
-          titleFont: { size: 13, weight: 600, family: 'Inter' },
-          bodyFont: { size: 12, family: 'Inter' },
+          backgroundColor: 'rgba(30, 58, 138, 0.95)',
+          padding: 10,
+          titleFont: { size: 12, weight: 'bold' },
+          bodyFont: { size: 11 },
+          cornerRadius: 6,
+          displayColors: false,
           callbacks: {
-            label: (ctx) => `Quantità: ${ctx.parsed.x} unità`
+            label: function(context) {
+              return 'Quantità: ' + context.parsed.y.toFixed(1);
+            }
           }
         }
       },
       scales: {
-        x: {
+        y: {
           beginAtZero: true,
           ticks: {
-            font: { size: 13, family: 'Inter', weight: 600 },
-            color: '#000000'
+            font: { size: 9 },
+            color: '#64748b'
           },
-          grid: { color: 'rgba(0,0,0,0.1)' }
+          grid: {
+            color: 'rgba(0, 0, 0, 0.04)',
+            drawBorder: false
+          }
         },
-        y: {
+        x: {
           ticks: {
-            font: { size: 14, family: 'Inter', weight: 600 },
-            color: '#000000'
+            font: { size: 8 },
+            maxRotation: 45,
+            minRotation: 45,
+            color: '#64748b'
           },
           grid: { display: false }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart',
+        onProgress: function(animation) {
+          const progress = animation.currentStep / animation.numSteps;
+          this.canvas.style.opacity = 0.3 + (progress * 0.7);
+        },
+        onComplete: function() {
+          this.canvas.style.opacity = 1;
+        }
+      },
+      animations: {
+        tension: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: 0,
+          to: 0.4,
+          loop: false
+        },
+        y: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: (ctx) => {
+            if (ctx.type === 'data') {
+              return ctx.chart.scales.y.getPixelForValue(0);
+            }
+          }
         }
       }
     }
   });
 }
+
+// Grafico 4: Frequenza Ordini (line chart come home)
+function renderOrderFrequencyStatsChart() {
+  const ctx = document.getElementById('orderFrequencyChart');
+  if (!ctx) return;
+  
+  // Calcola numero ordini per fornitore
+  const supplierFreq = {};
+  purchases.forEach(p => {
+    supplierFreq[p.supplier] = (supplierFreq[p.supplier] || 0) + 1;
+  });
+  
+  const sorted = Object.entries(supplierFreq).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+  const labels = sorted.map(x=>x[0]);
+  const values = sorted.map(x=>x[1]);
+  
+  if (window.orderFrequencyStatsChart) window.orderFrequencyStatsChart.destroy();
+  
+  window.orderFrequencyStatsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Ordini',
+        data: values,
+        backgroundColor: 'rgba(115, 135, 142, 0.2)',
+        borderColor: '#73878e',
+        borderWidth: 2.5,
+        pointBackgroundColor: '#73878e',
+        pointBorderColor: '#5a6a71',
+        pointBorderWidth: 1.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#8a9ba3',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(30, 58, 138, 0.95)',
+          padding: 10,
+          titleFont: { size: 12, weight: 'bold' },
+          bodyFont: { size: 11 },
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            label: function(context) {
+              return 'Ordini: ' + context.parsed.y;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            font: { size: 9 },
+            color: '#64748b'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.04)',
+            drawBorder: false
+          }
+        },
+        x: {
+          ticks: {
+            font: { size: 8 },
+            maxRotation: 45,
+            minRotation: 45,
+            color: '#64748b'
+          },
+          grid: { display: false }
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart',
+        onProgress: function(animation) {
+          const progress = animation.currentStep / animation.numSteps;
+          this.canvas.style.opacity = 0.3 + (progress * 0.7);
+        },
+        onComplete: function() {
+          this.canvas.style.opacity = 1;
+        }
+      },
+      animations: {
+        tension: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: 0,
+          to: 0.4,
+          loop: false
+        },
+        y: {
+          duration: 1500,
+          easing: 'easeInOutQuart',
+          from: (ctx) => {
+            if (ctx.type === 'data') {
+              return ctx.chart.scales.y.getPixelForValue(0);
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ===== FINE NUOVI GRAFICI =====
+
+// Rimuovi vecchie funzioni grafici
+function renderSupplierFrequencyChart() {}
+
+// Vecchie funzioni rimosse - ora i grafici usano lo stile unificato della home
 
 function renderClassicStatsSummary() {
   const el = document.getElementById('classicStatsSummary');
