@@ -144,53 +144,138 @@ function renderProductSearchResults(query) {
   }
   
   if (!query) return;
-  const filtered = products.filter(p => p.toLowerCase().includes(query.toLowerCase()));
-  if (filtered.length === 0) {
-    searchResults.innerHTML = '<li style="color:var(--muted);">Nessun prodotto trovato</li>';
+  
+  const lowerQuery = query.toLowerCase();
+  const results = [];
+  
+  // Cerca prodotti
+  const matchedProducts = products.filter(p => p.toLowerCase().includes(lowerQuery));
+  matchedProducts.forEach(product => {
+    results.push({ name: product, type: 'product' });
+  });
+  
+  // Cerca fornitori
+  const matchedSuppliers = suppliers.filter(s => s.toLowerCase().includes(lowerQuery));
+  matchedSuppliers.forEach(supplier => {
+    results.push({ name: supplier, type: 'supplier' });
+  });
+  
+  if (results.length === 0) {
+    searchResults.innerHTML = '<li style="color:var(--muted);">Nessun risultato trovato</li>';
     return;
   }
-  filtered.forEach(prod => {
+  
+  results.forEach((item, index) => {
     const li = document.createElement('li');
-    li.textContent = prod;
+    li.dataset.index = index;
+    li.dataset.type = item.type;
+    li.dataset.name = item.name;
+    
+    const typeLabel = item.type === 'product' ? 'Prodotto' : 'Fornitore';
+    const typeColor = item.type === 'product' ? '#2563eb' : '#059669';
+    
+    li.innerHTML = `<span>${item.name}</span><span style="color:${typeColor};font-size:0.8em;margin-left:0.5rem;font-weight:600;">(${typeLabel})</span>`;
+    
     li.onclick = () => {
-      // Vai alla pagina archivio
-      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-      document.getElementById('page-archive').classList.add('active');
-      navButtons.forEach(b=>b.classList.remove('active'));
-      document.querySelector('nav button[data-page="archive"]').classList.add('active');
-      
-      // Filtra per il prodotto selezionato
-      filterProduct.value = prod;
-      
-      // Pulisci la ricerca e ripristina la pillola E i badge
-      searchProduct.value = '';
-      searchResults.innerHTML = '';
-      spendingTrendsPill.classList.remove('dimmed');
-      if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed');
-      
-      // Renderizza l'archivio con il filtro
-      currentPage = 1; // Reset alla prima pagina
-      renderArchive();
-      
-      // Scroll verso l'alto dell'archivio
-      document.getElementById('page-archive').scrollIntoView({behavior:'smooth', block:'start'});
+      selectProductOrSupplier(item.name, item.type);
     };
     searchResults.appendChild(li);
   });
 }
 
 if (searchProduct) {
+  let selectedIndex = -1;
+  
   searchProduct.addEventListener('input', e => {
+    selectedIndex = -1;
     renderProductSearchResults(e.target.value);
   });
+  
+  // Navigazione con tastiera
+  searchProduct.addEventListener('keydown', e => {
+    const items = searchResults.querySelectorAll('li[data-index]');
+    
+    if (items.length === 0) return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+      updateSelectedItem(items, selectedIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, -1);
+      updateSelectedItem(items, selectedIndex);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < items.length) {
+        const selectedItem = items[selectedIndex];
+        const itemName = selectedItem.dataset.name;
+        const itemType = selectedItem.dataset.type;
+        selectProductOrSupplier(itemName, itemType);
+      }
+    } else if (e.key === 'Escape') {
+      searchProduct.value = '';
+      searchResults.innerHTML = '';
+      spendingTrendsPill.classList.remove('dimmed');
+      if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed');
+      selectedIndex = -1;
+    }
+  });
+  
   // Nascondi risultati se si clicca fuori
   document.addEventListener('click', e => {
     if (!searchProduct.contains(e.target) && !searchResults.contains(e.target)) {
       searchResults.innerHTML = '';
       spendingTrendsPill.classList.remove('dimmed'); // Ripristina anche la pillola
       if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed'); // Ripristina anche i badge
+      selectedIndex = -1;
     }
   });
+}
+
+// Funzione per aggiornare l'elemento selezionato visivamente
+function updateSelectedItem(items, index) {
+  items.forEach((item, i) => {
+    if (i === index) {
+      item.style.backgroundColor = 'rgba(47, 125, 101, 0.15)';
+      item.style.fontWeight = '600';
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else {
+      item.style.backgroundColor = '';
+      item.style.fontWeight = '';
+    }
+  });
+}
+
+// Funzione per selezionare un prodotto o fornitore
+function selectProductOrSupplier(name, type) {
+  // Vai alla pagina archivio
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-archive').classList.add('active');
+  navButtons.forEach(b=>b.classList.remove('active'));
+  document.querySelector('nav button[data-page="archive"]').classList.add('active');
+  
+  // Filtra per il prodotto o fornitore selezionato
+  if (type === 'product') {
+    filterProduct.value = name;
+    filterSupplier.value = '';
+  } else {
+    filterSupplier.value = name;
+    filterProduct.value = '';
+  }
+  
+  // Pulisci la ricerca e ripristina la pillola E i badge
+  searchProduct.value = '';
+  searchResults.innerHTML = '';
+  spendingTrendsPill.classList.remove('dimmed');
+  if (statsBadgesRow) statsBadgesRow.classList.remove('dimmed');
+  
+  // Renderizza l'archivio con il filtro
+  currentPage = 1; // Reset alla prima pagina
+  renderArchive();
+  
+  // Scroll verso l'alto dell'archivio
+  document.getElementById('page-archive').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 /* SELECTS */
@@ -601,6 +686,8 @@ function renderMonthlyTrendStatsChart() {
   
   if (window.monthlyTrendStatsChart) window.monthlyTrendStatsChart.destroy();
   
+  let initialAnimationDone = false;
+  
   window.monthlyTrendStatsChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -669,7 +756,7 @@ function renderMonthlyTrendStatsChart() {
         intersect: false,
         mode: 'index'
       },
-      animation: {
+      animation: initialAnimationDone ? false : {
         duration: 1500,
         easing: 'easeInOutQuart',
         onProgress: function(animation) {
@@ -678,9 +765,10 @@ function renderMonthlyTrendStatsChart() {
         },
         onComplete: function() {
           this.canvas.style.opacity = 1;
+          initialAnimationDone = true;
         }
       },
-      animations: {
+      animations: initialAnimationDone ? {} : {
         tension: {
           duration: 1500,
           easing: 'easeInOutQuart',
@@ -698,6 +786,19 @@ function renderMonthlyTrendStatsChart() {
           }
         }
       }
+    }
+  });
+  
+  // Animazione al hover
+  ctx.addEventListener('mouseenter', () => {
+    if (initialAnimationDone) {
+      window.monthlyTrendStatsChart.update('active');
+    }
+  });
+  
+  ctx.addEventListener('mouseleave', () => {
+    if (initialAnimationDone) {
+      window.monthlyTrendStatsChart.update('none');
     }
   });
 }
@@ -719,6 +820,8 @@ function renderSupplierSpendingStatsChart() {
   const values = sorted.map(x=>x[1]);
   
   if (window.supplierSpendingStatsChart) window.supplierSpendingStatsChart.destroy();
+  
+  let initialAnimationDone2 = false;
   
   window.supplierSpendingStatsChart = new Chart(ctx, {
     type: 'line',
@@ -788,7 +891,7 @@ function renderSupplierSpendingStatsChart() {
         intersect: false,
         mode: 'index'
       },
-      animation: {
+      animation: initialAnimationDone2 ? false : {
         duration: 1500,
         easing: 'easeInOutQuart',
         onProgress: function(animation) {
@@ -797,9 +900,10 @@ function renderSupplierSpendingStatsChart() {
         },
         onComplete: function() {
           this.canvas.style.opacity = 1;
+          initialAnimationDone2 = true;
         }
       },
-      animations: {
+      animations: initialAnimationDone2 ? {} : {
         tension: {
           duration: 1500,
           easing: 'easeInOutQuart',
@@ -817,6 +921,19 @@ function renderSupplierSpendingStatsChart() {
           }
         }
       }
+    }
+  });
+  
+  // Animazione al hover
+  ctx.addEventListener('mouseenter', () => {
+    if (initialAnimationDone2) {
+      window.supplierSpendingStatsChart.update('active');
+    }
+  });
+  
+  ctx.addEventListener('mouseleave', () => {
+    if (initialAnimationDone2) {
+      window.supplierSpendingStatsChart.update('none');
     }
   });
 }
@@ -838,6 +955,8 @@ function renderTopProductsStatsChart() {
   const values = sorted.map(x=>x[1]);
   
   if (window.topProductsStatsChart) window.topProductsStatsChart.destroy();
+  
+  let initialAnimationDone3 = false;
   
   window.topProductsStatsChart = new Chart(ctx, {
     type: 'line',
@@ -904,7 +1023,7 @@ function renderTopProductsStatsChart() {
         intersect: false,
         mode: 'index'
       },
-      animation: {
+      animation: initialAnimationDone3 ? false : {
         duration: 1500,
         easing: 'easeInOutQuart',
         onProgress: function(animation) {
@@ -913,9 +1032,10 @@ function renderTopProductsStatsChart() {
         },
         onComplete: function() {
           this.canvas.style.opacity = 1;
+          initialAnimationDone3 = true;
         }
       },
-      animations: {
+      animations: initialAnimationDone3 ? {} : {
         tension: {
           duration: 1500,
           easing: 'easeInOutQuart',
@@ -933,6 +1053,19 @@ function renderTopProductsStatsChart() {
           }
         }
       }
+    }
+  });
+  
+  // Animazione al hover
+  ctx.addEventListener('mouseenter', () => {
+    if (initialAnimationDone3) {
+      window.topProductsStatsChart.update('active');
+    }
+  });
+  
+  ctx.addEventListener('mouseleave', () => {
+    if (initialAnimationDone3) {
+      window.topProductsStatsChart.update('none');
     }
   });
 }
@@ -953,6 +1086,8 @@ function renderOrderFrequencyStatsChart() {
   const values = sorted.map(x=>x[1]);
   
   if (window.orderFrequencyStatsChart) window.orderFrequencyStatsChart.destroy();
+  
+  let initialAnimationDone4 = false;
   
   window.orderFrequencyStatsChart = new Chart(ctx, {
     type: 'line',
@@ -1020,7 +1155,7 @@ function renderOrderFrequencyStatsChart() {
         intersect: false,
         mode: 'index'
       },
-      animation: {
+      animation: initialAnimationDone4 ? false : {
         duration: 1500,
         easing: 'easeInOutQuart',
         onProgress: function(animation) {
@@ -1029,9 +1164,10 @@ function renderOrderFrequencyStatsChart() {
         },
         onComplete: function() {
           this.canvas.style.opacity = 1;
+          initialAnimationDone4 = true;
         }
       },
-      animations: {
+      animations: initialAnimationDone4 ? {} : {
         tension: {
           duration: 1500,
           easing: 'easeInOutQuart',
@@ -1049,6 +1185,19 @@ function renderOrderFrequencyStatsChart() {
           }
         }
       }
+    }
+  });
+  
+  // Animazione al hover
+  ctx.addEventListener('mouseenter', () => {
+    if (initialAnimationDone4) {
+      window.orderFrequencyStatsChart.update('active');
+    }
+  });
+  
+  ctx.addEventListener('mouseleave', () => {
+    if (initialAnimationDone4) {
+      window.orderFrequencyStatsChart.update('none');
     }
   });
 }
@@ -1234,6 +1383,8 @@ function renderSpendingTrends() {
   // Crea o aggiorna il grafico con stile scenografico "onde/montagne"
   if (trendsChart) trendsChart.destroy();
   
+  let initialAnimationDone5 = false;
+  
   trendsChart = new Chart(trendsChartCanvas, {
     type: 'line',
     data: {
@@ -1315,7 +1466,7 @@ function renderSpendingTrends() {
         intersect: false,
         mode: 'index'
       },
-      animation: {
+      animation: initialAnimationDone5 ? false : {
         duration: 1500,
         easing: 'easeInOutQuart',
         onProgress: function(animation) {
@@ -1326,9 +1477,10 @@ function renderSpendingTrends() {
         onComplete: function() {
           // Ripristina opacità completa alla fine
           this.canvas.style.opacity = 1;
+          initialAnimationDone5 = true;
         }
       },
-      animations: {
+      animations: initialAnimationDone5 ? {} : {
         tension: {
           duration: 1500,
           easing: 'easeInOutQuart',
@@ -1346,6 +1498,19 @@ function renderSpendingTrends() {
           }
         }
       }
+    }
+  });
+  
+  // Animazione al hover
+  trendsChartCanvas.addEventListener('mouseenter', () => {
+    if (initialAnimationDone5) {
+      trendsChart.update('active');
+    }
+  });
+  
+  trendsChartCanvas.addEventListener('mouseleave', () => {
+    if (initialAnimationDone5) {
+      trendsChart.update('none');
     }
   });
 }
