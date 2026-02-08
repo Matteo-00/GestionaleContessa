@@ -2560,3 +2560,222 @@ h2 {
     min-height: 200px;
   }
 }
+
+/* ===== SUGGESTION BOX (SUGGERIMENTI PRODOTTI/FORNITORI) ===== */
+.suggestion-box {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2.5px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  margin-top: 0.5rem;
+  max-height: 450px;
+  display: flex;
+  flex-direction: column;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestion-header {
+  padding: 1.2rem 1.5rem;
+  background: linear-gradient(135deg, #d4f0e1 0%, #edf9f3 100%);
+  border-bottom: 2px solid #9dd3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.suggestion-list {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 0.3rem 0;
+  flex: 1 1 auto;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+
+.suggestion-item:hover {
+  background: #f0fdf4;
+}
+
+.suggestion-name {
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.suggestion-use-btn {
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.suggestion-use-btn:hover {
+  background: #1e5a47;
+  transform: scale(1.05);
+}
+
+.suggestion-footer {
+  padding: 1.1rem 1.5rem;
+  background: #f9fafb;
+  border-top: 2px solid #d1d5db;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.suggestion-continue-btn {
+  padding: 0.7rem 1.4rem;
+  background: #2f7d65;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.95rem;
+}
+
+.suggestion-continue-btn:hover {
+  background: #1e5a47;
+  transform: scale(1.02);
+}
+
+/* Mobile responsive per suggestion box */
+@media (max-width: 768px) {
+  .suggestion-box {
+    max-height: 420px;
+  }
+  
+  .suggestion-header {
+    padding: 1rem 1.2rem;
+  }
+  
+  .suggestion-list {
+    max-height: 220px;
+  }
+  
+  .suggestion-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 1rem;
+  }
+  
+  .suggestion-use-btn {
+    width: 100%;
+    padding: 0.6rem 1rem;
+  }
+  
+  .suggestion-footer {
+    padding: 1rem 1.2rem;
+  }
+  
+  .suggestion-continue-btn {
+    width: 100%;
+  }
+}
+
+/* ===== MIGLIORAMENTI PER INPUT CON DATALIST (RICERCA) ===== */
+input[list].fixed-select {
+  /* Rimuove le frecce del select e mette la lente di ricerca */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%232f7d65" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 16px !important;
+  padding-right: 36px !important;
+  text-align: left !important;
+  padding-left: 4px !important;
+  text-indent: 0 !important;
+}
+
+input[list].fixed-select:focus {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%231e5a47" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') !important;
+  text-align: left !important;
+  padding-left: 4px !important;
+  text-indent: 0 !important;
+}
+
+input[list] {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%232f7d65" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+  text-align: left;
+}
+
+input[list]:focus {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%231e5a47" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>');
+  text-align: left;
+}
+
+/* Migliora visualizzazione datalist */
+datalist {
+  position: absolute;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Stile per le opzioni del datalist (supporto limitato nei browser) */
+option {
+  padding: 0.5rem 0.6rem;
+  padding-left: 0.4rem;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+/* ===== STILI PER FILTRI ARCHIVIO CON RICERCA ===== */
+input.filter-search {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="%232f7d65" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 14px !important;
+  padding-right: 32px !important;
+  text-align: left !important;
+  padding-left: 4px !important;
+}
+
+input.filter-search:focus {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="%231e5a47" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') !important;
+}
+
+input.filter-search::placeholder {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}

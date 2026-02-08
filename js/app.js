@@ -306,17 +306,148 @@ const prevPage = document.getElementById('prevPage');
 const nextPage = document.getElementById('nextPage');
 
 function refreshSelects(){
-  const fill=(el,list)=>{
-    el.innerHTML='<option value="">Tutti</option>';
+  const fillDatalist=(inputEl, datalistId, list, placeholder)=>{
+    const datalist = document.getElementById(datalistId);
+    if (datalist) {
+      datalist.innerHTML = '';
+      list.forEach(x=> {
+        const option = document.createElement('option');
+        option.value = x;
+        datalist.appendChild(option);
+      });
+    }
+    if (inputEl && placeholder) {
+      inputEl.placeholder = placeholder;
+    }
+  };
+  
+  const fillSelect=(el,list,label)=>{
+    el.innerHTML=`<option value="">${label}</option>`;
     list.forEach(x=>el.innerHTML+=`<option>${x}</option>`);
   };
-  fill(productSelect,products);
-  fill(supplierSelect,suppliers);
-  fill(filterProduct,products);
-  fill(filterSupplier,suppliers);
-  fill(statsProduct,products);
-  fill(statsSupplier,suppliers);
+  
+  // Popola i datalist per la ricerca
+  fillDatalist(productSelect, 'productDatalist', products, ' Cerca tra ' + products.length + ' prodotti...');
+  fillDatalist(supplierSelect, 'supplierDatalist', suppliers, ' Cerca tra ' + suppliers.length + ' fornitori...');
+  
+  // Popola i datalist per i filtri archivio
+  fillDatalist(filterProduct, 'filterProductDatalist', products, ' Cerca prodotto...');
+  fillDatalist(filterSupplier, 'filterSupplierDatalist', suppliers, ' Cerca fornitore...');
+  
+  // Popola i select normali (statistiche)
+  fillSelect(statsProduct,products,'Seleziona un prodotto');
+  fillSelect(statsSupplier,suppliers,'Tutti i fornitori');
 }
+
+// ===== SUGGERIMENTI IN TEMPO REALE PER PRODOTTI E FORNITORI =====
+let suggestionTimeout = null;
+
+// Funzione per mostrare suggerimenti prodotti/fornitori simili
+function showSuggestions(inputElement, listArray, type) {
+  const query = inputElement.value.trim();
+  
+  // Mostra suggerimenti solo dopo 3 caratteri
+  if (query.length < 3) {
+    hideSuggestions(inputElement);
+    return;
+  }
+  
+  // Cerca elementi simili nel database
+  const matches = listArray.filter(item => 
+    item.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  if (matches.length > 0) {
+    displaySuggestionBox(inputElement, matches, type);
+  } else {
+    hideSuggestions(inputElement);
+  }
+}
+
+function displaySuggestionBox(inputElement, matches, type) {
+  // Rimuovi eventuali box esistenti
+  hideSuggestions(inputElement);
+  
+  const suggestionBox = document.createElement('div');
+  suggestionBox.className = 'suggestion-box';
+  suggestionBox.innerHTML = `
+    <div class="suggestion-header">
+      <span style="font-weight:700;color:#1f2937;font-size:1.05rem;">${type === 'product' ? 'Prodotti simili registrati' : 'Fornitori simili registrati'}</span>
+    </div>
+    <div class="suggestion-list">
+      ${matches.map(item => `
+        <div class="suggestion-item" data-value="${item}">
+          <span class="suggestion-name">${item}</span>
+          <button class="suggestion-use-btn" data-value="${item}">Usa questo</button>
+        </div>
+      `).join('')}
+    </div>
+    <div class="suggestion-footer">
+      <button class="suggestion-continue-btn">✓ No, voglio aggiungerne uno nuovo</button>
+    </div>
+  `;
+  
+  inputElement.parentElement.style.position = 'relative';
+  inputElement.parentElement.appendChild(suggestionBox);
+  
+  // Event listeners per i bottoni
+  suggestionBox.querySelectorAll('.suggestion-use-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const value = btn.dataset.value;
+      if (type === 'product') {
+        productSelect.value = value;
+        newProduct.value = '';
+      } else {
+        supplierSelect.value = value;
+        newSupplier.value = '';
+      }
+      hideSuggestions(inputElement);
+    };
+  });
+  
+  suggestionBox.querySelector('.suggestion-continue-btn').onclick = (e) => {
+    e.stopPropagation();
+    hideSuggestions(inputElement);
+  };
+}
+
+function hideSuggestions(inputElement) {
+  const existingBox = inputElement.parentElement.querySelector('.suggestion-box');
+  if (existingBox) {
+    existingBox.remove();
+  }
+}
+
+// Event listeners per suggerimenti in tempo reale
+newProduct.addEventListener('input', () => {
+  clearTimeout(suggestionTimeout);
+  suggestionTimeout = setTimeout(() => {
+    showSuggestions(newProduct, products, 'product');
+  }, 300);
+});
+
+newSupplier.addEventListener('input', () => {
+  clearTimeout(suggestionTimeout);
+  suggestionTimeout = setTimeout(() => {
+    showSuggestions(newSupplier, suppliers, 'supplier');
+  }, 300);
+});
+
+// Quando si seleziona un prodotto/fornitore esistente, pulisci il campo "nuovo"
+productSelect.addEventListener('input', () => {
+  if (productSelect.value && products.includes(productSelect.value)) {
+    newProduct.value = '';
+    hideSuggestions(newProduct);
+  }
+});
+
+supplierSelect.addEventListener('input', () => {
+  if (supplierSelect.value && suppliers.includes(supplierSelect.value)) {
+    newSupplier.value = '';
+    hideSuggestions(newSupplier);
+  }
+});
 
 // Sistema di valutazione stelle (supporto mezze stelle)
 let currentRating = 0;
@@ -409,20 +540,50 @@ savePurchase.onclick = async () => {
   }
 
   try {
-    const newPurchase = {
-      product:p,
-      supplier:s,
-      price:+price.value,
-      quantity:+q,
-      unit:u,
-      date:purchaseDate.value,
-      description:d,
-      rating:r,
-      lastPurchaseDate:purchaseDate.value
-    };
+    // Cerca se esiste già un acquisto con stesso prodotto e fornitore
+    const existingPurchase = purchases.find(purchase => 
+      purchase.product === p && purchase.supplier === s
+    );
     
-    const saved = await db.addPurchase(newPurchase);
-    purchases.push(saved);
+    if (existingPurchase) {
+      // AGGIORNA il record esistente
+      const oldQuantity = parseFloat(existingPurchase.quantity) || 0;
+      const newQuantity = parseFloat(q);
+      const totalQuantity = oldQuantity + newQuantity;
+      
+      const updatedData = {
+        price: +price.value,  // Nuovo prezzo
+        quantity: totalQuantity,  // Quantità totale sommata
+        unit: u,
+        date: purchaseDate.value,  // Data aggiornata
+        description: d || existingPurchase.description,  // Mantieni descrizione se non specificata
+        rating: r || existingPurchase.rating,  // Mantieni rating se non specificato
+        lastPurchaseDate: purchaseDate.value
+      };
+      
+      await db.updatePurchase(existingPurchase.id, updatedData);
+      
+      // Aggiorna anche l'array locale
+      Object.assign(existingPurchase, updatedData);
+      
+      alert(`Prodotto aggiornato! Quantità totale: ${totalQuantity} ${u}`);
+    } else {
+      // CREA nuovo record
+      const newPurchase = {
+        product:p,
+        supplier:s,
+        price:+price.value,
+        quantity:+q,
+        unit:u,
+        date:purchaseDate.value,
+        description:d,
+        rating:r,
+        lastPurchaseDate:purchaseDate.value
+      };
+      
+      const saved = await db.addPurchase(newPurchase);
+      purchases.push(saved);
+    }
     
     // Ricarica le liste prodotti e fornitori
     products = await db.getAllProducts();
@@ -450,8 +611,8 @@ let currentPage=1, perPage=8;
 function renderArchive(){
   let data=[...purchases];
 
-  if(filterProduct.value)data=data.filter(x=>x.product===filterProduct.value);
-  if(filterSupplier.value)data=data.filter(x=>x.supplier===filterSupplier.value);
+  if(filterProduct.value)data=data.filter(x=>x.product.toLowerCase().includes(filterProduct.value.toLowerCase()));
+  if(filterSupplier.value)data=data.filter(x=>x.supplier.toLowerCase().includes(filterSupplier.value.toLowerCase()));
 
   if(filterPriceMode.value==='exact'&&filterPriceExact.value)
     data=data.filter(x=>x.price==filterPriceExact.value);
@@ -489,9 +650,9 @@ function renderArchive(){
         <td>${x.description || ''}</td>
         <td style="white-space:nowrap;">
           <button class="view-stats-btn" data-product="${x.product}" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Statistiche</button>
-          <button class="repurchase-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#2f7d65;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Acquista</button>
-          <button class="edit-btn" data-index="${actualIndex}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Modifica</button>
-          <button class="delete-btn" data-index="${actualIndex}" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Elimina</button>
+          <button class="repurchase-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#2f7d65;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Acquista</button>
+          <button class="edit-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Modifica</button>
+          <button class="delete-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Elimina</button>
         </td>
       </tr>`;
   });
@@ -548,30 +709,32 @@ function renderArchive(){
   // Event listener per bottoni Riacquisto
   document.querySelectorAll('.repurchase-btn').forEach(btn => {
     btn.onclick = () => {
-      const index = parseInt(btn.dataset.index);
-      openRepurchaseDialog(purchases[index], index);
+      const id = btn.dataset.id;
+      const purchase = purchases.find(p => p.id == id);
+      if (purchase) openRepurchaseDialog(purchase, id);
     };
   });
   
   // Event listener per bottoni Modifica
   document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.onclick = () => {
-      const index = parseInt(btn.dataset.index);
-      openEditDialog(purchases[index], index);
+      const id = btn.dataset.id;
+      const purchase = purchases.find(p => p.id == id);
+      if (purchase) openEditDialog(purchase, id);
     };
   });
 
   // Event listener per bottoni Elimina
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.onclick = async () => {
-      const index = parseInt(btn.dataset.index);
       const id = btn.dataset.id;
-      const purchase = purchases[index];
+      const purchase = purchases.find(p => p.id == id);
       
-      if (confirm(`Sei sicuro di voler eliminare definitivamente "${purchase.product}"?\nQuesta operazione non può essere annullata.`)) {
+      if (purchase && confirm(`Sei sicuro di voler eliminare definitivamente "${purchase.product}"?\nQuesta operazione non può essere annullata.`)) {
         try {
           await db.deletePurchase(id);
-          purchases.splice(index, 1);
+          const index = purchases.findIndex(p => p.id == id);
+          if (index !== -1) purchases.splice(index, 1);
           renderArchive();
           renderStats();
           alert('Prodotto eliminato con successo');
@@ -590,8 +753,8 @@ prevPage.onclick=()=>{ currentPage=Math.max(1,currentPage-1); renderArchive(); }
 nextPage.onclick=()=>{ 
   // calcola tot pagine in base ai filtri correnti
   let data=[...purchases];
-  if(filterProduct.value)data=data.filter(x=>x.product===filterProduct.value);
-  if(filterSupplier.value)data=data.filter(x=>x.supplier===filterSupplier.value);
+  if(filterProduct.value)data=data.filter(x=>x.product.toLowerCase().includes(filterProduct.value.toLowerCase()));
+  if(filterSupplier.value)data=data.filter(x=>x.supplier.toLowerCase().includes(filterSupplier.value.toLowerCase()));
   if(filterPriceMode.value==='exact'&&filterPriceExact.value)
     data=data.filter(x=>x.price==filterPriceExact.value);
   if(filterDateMode.value==='range')
@@ -1272,8 +1435,8 @@ statsProduct.onchange = () => renderStats();
 statsSupplier.onchange = () => renderStats();
 
 // Listener per filtri archivio
-filterProduct.onchange = () => renderArchive();
-filterSupplier.onchange = () => renderArchive();
+filterProduct.oninput = () => renderArchive();
+filterSupplier.oninput = () => renderArchive();
 filterPriceMode.onchange = () => { 
   filterPriceExact.classList.toggle('hidden',filterPriceMode.value!=='exact'); 
   renderArchive(); 
@@ -1572,10 +1735,10 @@ const lastPriceInfo = document.getElementById('lastPriceInfo');
 const saveRepurchase = document.getElementById('saveRepurchase');
 const closeRepurchaseDialog = document.getElementById('closeRepurchaseDialog');
 
-let currentRepurchaseIndex = null;
+let currentRepurchaseId = null;
 
-function openRepurchaseDialog(purchase, index) {
-  currentRepurchaseIndex = index;
+function openRepurchaseDialog(purchase, id) {
+  currentRepurchaseId = id;
   
   repurchaseContent.innerHTML = `
     <div style="background:var(--card-subtle);padding:1rem;border-radius:6px;border-left:3px solid var(--primary);">
@@ -1599,7 +1762,11 @@ saveRepurchase.onclick = async () => {
   }
   
   try {
-    const originalPurchase = purchases[currentRepurchaseIndex];
+    const originalPurchase = purchases.find(p => p.id == currentRepurchaseId);
+    if (!originalPurchase) {
+      alert('Prodotto non trovato');
+      return;
+    }
     const today = new Date().toISOString().split('T')[0];
     
     // SOMMA la quantità esistente con quella nuova
@@ -1618,10 +1785,10 @@ saveRepurchase.onclick = async () => {
     await db.updatePurchase(originalPurchase.id, updatedData);
     
     // Aggiorna anche l'array locale
-    purchases[currentRepurchaseIndex].price = updatedData.price;
-    purchases[currentRepurchaseIndex].quantity = updatedData.quantity;
-    purchases[currentRepurchaseIndex].date = updatedData.date;
-    purchases[currentRepurchaseIndex].lastPurchaseDate = updatedData.lastPurchaseDate;
+    originalPurchase.price = updatedData.price;
+    originalPurchase.quantity = updatedData.quantity;
+    originalPurchase.date = updatedData.date;
+    originalPurchase.lastPurchaseDate = updatedData.lastPurchaseDate;
     
     repurchaseDialog.close();
     showToast();
@@ -1649,7 +1816,7 @@ const editRatingStars = document.querySelectorAll('#editRatingStars .edit-star')
 const saveEdit = document.getElementById('saveEdit');
 const closeEditDialog = document.getElementById('closeEditDialog');
 
-let currentEditIndex = null;
+let currentEditId = null;
 let editCurrentRating = 0;
 
 // Sistema stelle per dialog modifica
@@ -1671,8 +1838,8 @@ document.getElementById('editRatingStars').addEventListener('mouseleave', () => 
   updateStars(editCurrentRating, editRatingStars);
 });
 
-function openEditDialog(purchase, index) {
-  currentEditIndex = index;
+function openEditDialog(purchase, id) {
+  currentEditId = id;
   
   editProduct.value = purchase.product;
   editSupplier.value = purchase.supplier;
@@ -1695,7 +1862,11 @@ saveEdit.onclick = async () => {
   }
   
   try {
-    const purchaseToUpdate = purchases[currentEditIndex];
+    const purchaseToUpdate = purchases.find(p => p.id == currentEditId);
+    if (!purchaseToUpdate) {
+      alert('Prodotto non trovato');
+      return;
+    }
     
     const updatedPurchase = {
       product: editProduct.value,
@@ -1709,7 +1880,7 @@ saveEdit.onclick = async () => {
     };
     
     await db.updatePurchase(purchaseToUpdate.id, updatedPurchase);
-    purchases[currentEditIndex] = { ...purchaseToUpdate, ...updatedPurchase };
+    Object.assign(purchaseToUpdate, updatedPurchase);
     
     // Ricarica le liste prodotti e fornitori
     products = await db.getAllProducts();

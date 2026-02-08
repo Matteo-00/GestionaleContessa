@@ -66,10 +66,10 @@
         <!-- PARAGRAFO 1: Ricerca prodotto -->
         <div class="search-section big-tile wide-tile" style="margin-bottom:0;">
           <div class="form-header">
-            <span class="form-icon">→</span>
-            <h2>Cerca Prodotto</h2>
+            <span class="form-icon">🔍</span>
+            <h2>Cerca Prodotto o Fornitore</h2>
           </div>
-          <p class="subtitle">Trova rapidamente prodotti o fornitori</p>
+          <p class="subtitle" style="margin-top:0;">Verifica se è già registrato prima di inserirne uno nuovo</p>
           <label for="searchProduct">Nome prodotto/fornitore</label>
           <input id="searchProduct" class="search-bar" type="text" placeholder="Inizia a digitare...">
           <ul id="searchResults" class="search-results"></ul>
@@ -127,12 +127,14 @@
         <div class="grid">
           <div>
             <label for="productSelect">Prodotto</label>
-            <select id="productSelect" class="fixed-select"></select>
+            <input list="productDatalist" id="productSelect" class="fixed-select" placeholder="🔍 Cerca o seleziona..." style="cursor:text;">
+            <datalist id="productDatalist"></datalist>
             <input id="newProduct" placeholder="Nuovo prodotto" style="margin-top:0.3rem;">
           </div>
           <div>
             <label for="supplierSelect">Fornitore</label>
-            <select id="supplierSelect" class="fixed-select"></select>
+            <input list="supplierDatalist" id="supplierSelect" class="fixed-select" placeholder="🔍 Cerca o seleziona..." style="cursor:text;">
+            <datalist id="supplierDatalist"></datalist>
             <input id="newSupplier" placeholder="Nuovo fornitore" style="margin-top:0.3rem;">
           </div>
           <div>
@@ -200,23 +202,37 @@
 
     <!-- FILTRI -->
     <div class="filters">
-      <select id="filterProduct" class="fixed-select"></select>
-      <select id="filterSupplier" class="fixed-select"></select>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+        <label for="filterProduct" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Prodotto</label>
+        <input list="filterProductDatalist" id="filterProduct" class="fixed-select filter-search" placeholder=" Cerca prodotto..." style="cursor:text;">
+        <datalist id="filterProductDatalist"></datalist>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+        <label for="filterSupplier" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Fornitore</label>
+        <input list="filterSupplierDatalist" id="filterSupplier" class="fixed-select filter-search" placeholder=" Cerca fornitore..." style="cursor:text;">
+        <datalist id="filterSupplierDatalist"></datalist>
+      </div>
 
-      <select id="filterPriceMode">
-        <option value="">Prezzo</option>
-        <option value="asc">Crescente</option>
-        <option value="desc">Decrescente</option>
-        <option value="exact">Prezzo esatto</option>
-      </select>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+        <label for="filterPriceMode" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Prezzo</label>
+        <select id="filterPriceMode">
+          <option value="">Prezzo</option>
+          <option value="asc">Crescente</option>
+          <option value="desc">Decrescente</option>
+          <option value="exact">Prezzo esatto</option>
+        </select>
+      </div>
       <input type="number" id="filterPriceExact" class="hidden" placeholder="€ esatto">
 
-      <select id="filterDateMode">
-        <option value="">Data</option>
-        <option value="recent">Più recente</option>
-        <option value="old">Meno recente</option>
-        <option value="range">Intervallo</option>
-      </select>
+      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+        <label for="filterDateMode" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Data</label>
+        <select id="filterDateMode">
+          <option value="">Data</option>
+          <option value="recent">Più recente</option>
+          <option value="old">Meno recente</option>
+          <option value="range">Intervallo</option>
+        </select>
+      </div>
       <div id="dateRange" class="hidden">
         <input type="date" id="dateFrom">
         <input type="date" id="dateTo">
@@ -444,7 +460,7 @@
       <input type="date" id="editDate">
     </div>
     <div>
-      <label for="editDescription">Note</label>
+      <label for="editDescription">Descrizione</label>
       <input type="text" id="editDescription">
     </div>
     <div>
