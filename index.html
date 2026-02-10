@@ -48,6 +48,7 @@
     <div class="nav-tabs" role="tablist" aria-label="Sezioni">
       <button data-page="new" class="active" role="tab" aria-selected="true">Home</button>
       <button data-page="archive" role="tab">Archivio</button>
+      <button data-page="suppliers" role="tab">Fornitori/Prodotti</button>
       <button data-page="stats" role="tab">Statistiche</button>
     </div>
   </nav>
@@ -66,7 +67,7 @@
         <!-- PARAGRAFO 1: Ricerca prodotto -->
         <div class="search-section big-tile wide-tile" style="margin-bottom:0;">
           <div class="form-header">
-            <span class="form-icon">🔍</span>
+            <span class="form-icon">◉</span>
             <h2>Cerca Prodotto o Fornitore</h2>
           </div>
           <p class="subtitle" style="margin-top:0;">Verifica se è già registrato prima di inserirne uno nuovo</p>
@@ -145,6 +146,7 @@
                 <option value="kg">Kg</option>
                 <option value="litri">Litro/i</option>
                 <option value="pezzi">Pezzo/i</option>
+                <option value="bott">Bott.</option>
               </select>
             </div>
           </div>
@@ -204,12 +206,12 @@
     <div class="filters">
       <div style="display:flex;flex-direction:column;gap:0.3rem;">
         <label for="filterProduct" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Prodotto</label>
-        <input list="filterProductDatalist" id="filterProduct" class="fixed-select filter-search" placeholder=" Cerca prodotto..." style="cursor:text;">
+        <input list="filterProductDatalist" id="filterProduct" class="fixed-select filter-search" placeholder="Cerca prodotto..." style="cursor:text;">
         <datalist id="filterProductDatalist"></datalist>
       </div>
       <div style="display:flex;flex-direction:column;gap:0.3rem;">
         <label for="filterSupplier" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Fornitore</label>
-        <input list="filterSupplierDatalist" id="filterSupplier" class="fixed-select filter-search" placeholder=" Cerca fornitore..." style="cursor:text;">
+        <input list="filterSupplierDatalist" id="filterSupplier" class="fixed-select filter-search" placeholder="Cerca fornitore..." style="cursor:text;">
         <datalist id="filterSupplierDatalist"></datalist>
       </div>
 
@@ -266,6 +268,50 @@
     <div class="export">
       <button id="exportExcel">Excel</button>
       <button id="exportPDF">PDF</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- FORNITORI/PRODOTTI -->
+<section id="page-suppliers" class="page">
+  <div class="card">
+    <div class="section-header">
+      <h2>Fornitori/Prodotti</h2>
+      <p style="color:var(--muted);font-size:0.9rem;">Gestisci fornitori e prodotti registrati</p>
+    </div>
+
+    <div style="display:flex;gap:1.5rem;margin-top:1.5rem;">
+      <!-- TABELLA FORNITORI -->
+      <div style="flex:1;">
+        <h3 style="margin:0 0 0.5rem 0;font-size:1.1rem;color:var(--primary);">Fornitori</h3>
+        <button id="addNewSupplierBtn" class="primary" style="padding:0.5rem 1rem;font-size:0.85rem;margin-bottom:1rem;">➕ Nuovo Fornitore</button>
+        <input id="filterSupplierName" class="filter-search" placeholder="Cerca fornitore..." style="cursor:text;margin-bottom:1rem;width:100%;">
+        <table class="suppliers-products-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th style="width:100px;">Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="suppliersTable"></tbody>
+        </table>
+      </div>
+
+      <!-- TABELLA PRODOTTI -->
+      <div style="flex:1;">
+        <h3 style="margin:0 0 0.5rem 0;font-size:1.1rem;color:var(--primary);">Prodotti</h3>
+        <button id="addNewProductBtn" class="primary" style="padding:0.5rem 1rem;font-size:0.85rem;margin-bottom:1rem;">➕ Nuovo Prodotto</button>
+        <input id="filterProductName" class="filter-search" placeholder="Cerca prodotto..." style="cursor:text;margin-bottom:1rem;width:100%;">
+        <table class="suppliers-products-table">
+          <thead>
+            <tr>
+              <th>Nome Prodotto</th>
+            </tr>
+          </thead>
+          <tbody id="productsTable"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>
@@ -339,6 +385,59 @@
         <div class="kpi-pro-card">
           <div class="kpi-pro-label">Spesa Media</div>
           <div class="kpi-pro-value" id="kpiAvgPurchase">€ 0</div>
+        </div>
+      </div>
+
+      <!-- Grafici Filtrabili per Periodo (Fornitore e Prodotto) -->
+      <div style="display:flex;gap:1.5rem;margin:2rem 0;">
+        <!-- Grafico Spese Fornitore -->
+        <div class="spending-trends-pill" style="flex:1;">
+          <div class="pill-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+              <h3 class="pill-title" style="margin:0;flex-shrink:0;">Spese Fornitore</h3>
+              <div class="period-total-badge" style="margin:0 auto;">
+                <span class="period-total-label">Totale:</span>
+                <span class="period-total-value" id="supplierPeriodTotal">€ 0</span>
+              </div>
+              <select id="supplierChartPeriod" class="trends-filter" style="flex-shrink:0;">
+                <option value="7">7g</option>
+                <option value="30" selected>Mese</option>
+                <option value="90">3 Mesi</option>
+                <option value="180">6 Mesi</option>
+                <option value="365">Anno</option>
+              </select>
+            </div>
+          </div>
+          <input list="supplierChartDatalist" id="supplierChartSelect" class="fixed-select" placeholder="🔍 Cerca o seleziona fornitore..." style="width:100%;margin-top:0.6rem;cursor:text;">
+          <datalist id="supplierChartDatalist"></datalist>
+          <div class="trends-chart-wrapper">
+            <canvas id="supplierPeriodChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grafico Spese Prodotto -->
+        <div class="spending-trends-pill" style="flex:1;">
+          <div class="pill-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+              <h3 class="pill-title" style="margin:0;flex-shrink:0;">Spese Prodotto</h3>
+              <div class="period-total-badge" style="margin:0 auto;">
+                <span class="period-total-label">Totale:</span>
+                <span class="period-total-value" id="productPeriodTotal">€ 0</span>
+              </div>
+              <select id="productChartPeriod" class="trends-filter" style="flex-shrink:0;">
+                <option value="7">7g</option>
+                <option value="30" selected>Mese</option>
+                <option value="90">3 Mesi</option>
+                <option value="180">6 Mesi</option>
+                <option value="365">Anno</option>
+              </select>
+            </div>
+          </div>
+          <input list="productChartDatalist" id="productChartSelect" class="fixed-select" placeholder="🔍 Cerca o seleziona prodotto..." style="width:100%;margin-top:0.6rem;cursor:text;">
+          <datalist id="productChartDatalist"></datalist>
+          <div class="trends-chart-wrapper">
+            <canvas id="productPeriodChart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -420,6 +519,23 @@
       <input type="number" id="repurchasePrice" step="0.01" placeholder="0.00">
       <div id="lastPriceInfo" style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;"></div>
     </div>
+    <div>
+      <label for="repurchaseRating">Qualità prodotto (opzionale)</label>
+      <div id="repurchaseRatingStars" style="display:flex;align-items:center;gap:0.3rem;margin-top:0.3rem;cursor:pointer;">
+        <span class="repurchase-star" data-value="0.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="1" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="1.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="2" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="2.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="3" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="3.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="4" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="4.5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <span class="repurchase-star" data-value="5" style="font-size:1.8rem;color:#d1d5db;transition:all 0.2s;">★</span>
+        <input type="hidden" id="repurchaseRating" value="0">
+      </div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;">Se non specifichi, verrà mantenuta la qualità precedente</div>
+    </div>
   </div>
   <div style="display:flex;gap:0.6rem;">
     <button id="saveRepurchase" class="primary" style="flex:1;">Salva Riacquisto</button>
@@ -430,26 +546,29 @@
 <!-- DIALOG MODIFICA PRODOTTO -->
 <dialog id="editDialog" class="product-dialog">
   <h2 style="margin-top:0;">Modifica Prodotto</h2>
+  <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:0.8rem;margin-bottom:1rem;font-size:0.85rem;">
+    <strong>⚠️ Info:</strong> Puoi modificare solo <strong>Descrizione</strong> e <strong>Qualità</strong>. Gli altri campi sono bloccati.
+  </div>
   <div style="display:grid;gap:0.8rem;margin:1rem 0;">
     <div>
       <label for="editProduct">Prodotto</label>
-      <input type="text" id="editProduct">
+      <input type="text" id="editProduct" disabled style="background:#f3f4f6;cursor:not-allowed;">
     </div>
     <div>
       <label for="editSupplier">Fornitore</label>
-      <input type="text" id="editSupplier">
+      <input type="text" id="editSupplier" disabled style="background:#f3f4f6;cursor:not-allowed;">
     </div>
     <div>
       <label for="editPrice">Prezzo (€)</label>
-      <input type="number" id="editPrice" step="0.01">
+      <input type="number" id="editPrice" step="0.01" disabled style="background:#f3f4f6;cursor:not-allowed;">
     </div>
     <div>
       <label for="editQuantity">Quantità</label>
-      <input type="number" id="editQuantity" step="0.01">
+      <input type="number" id="editQuantity" step="0.01" disabled style="background:#f3f4f6;cursor:not-allowed;">
     </div>
     <div>
       <label for="editUnit">Unità</label>
-      <select id="editUnit">
+      <select id="editUnit" disabled style="background:#f3f4f6;cursor:not-allowed;">
         <option value="kg">Kg</option>
         <option value="litri">Litro/i</option>
         <option value="pezzi">Pezzo/i</option>
@@ -457,11 +576,11 @@
     </div>
     <div>
       <label for="editDate">Data</label>
-      <input type="date" id="editDate">
+      <input type="date" id="editDate" disabled style="background:#f3f4f6;cursor:not-allowed;">
     </div>
     <div>
       <label for="editDescription">Descrizione</label>
-      <input type="text" id="editDescription">
+      <input type="text" id="editDescription" style="background:#fffbeb;border:2px solid #fbbf24;">
     </div>
     <div>
       <label for="editRating">Qualità prodotto</label>
@@ -483,6 +602,100 @@
   <div style="display:flex;gap:0.6rem;">
     <button id="saveEdit" class="primary" style="flex:1;">Salva Modifiche</button>
     <button id="closeEditDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
+  </div>
+</dialog>
+
+<!-- DIALOG CONSUMA PRODOTTO -->
+<dialog id="consumeDialog" class="product-dialog">
+  <h2 style="margin-top:0;">Registra Consumo</h2>
+  <div id="consumeContent" style="margin:1rem 0;padding:1rem;background:#f3f4f6;border-radius:8px;">
+    <!-- Info prodotto visualizzate dinamicamente -->
+  </div>
+  <div style="display:grid;gap:0.8rem;margin:1rem 0;">
+    <div>
+      <label for="consumeQuantity">Quantità Consumata *</label>
+      <input type="number" id="consumeQuantity" step="0.01" placeholder="0.00" required>
+    </div>
+    <div>
+      <label for="consumeDate">Data Consumo</label>
+      <input type="date" id="consumeDate">
+    </div>
+  </div>
+  <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:0.8rem;margin:1rem 0;font-size:0.85rem;">
+    <strong>⚠️ Nota:</strong> Il consumo ridurrà definitivamente la quantità disponibile in archivio.
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <button id="saveConsume" class="primary" style="flex:1;background:#f59e0b;">Conferma Consumo</button>
+    <button id="closeConsumeDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
+  </div>
+</dialog>
+
+<!-- DIALOG NUOVO FORNITORE -->
+<dialog id="newSupplierDialog" class="product-dialog">
+  <h2 style="margin-top:0;">Nuovo Fornitore</h2>
+  <div style="display:grid;gap:0.8rem;margin:1rem 0;">
+    <div>
+      <label for="newSupplierName">Nome Fornitore *</label>
+      <input type="text" id="newSupplierName" placeholder="Es: Fornitore X" required>
+    </div>
+    <div>
+      <label for="newSupplierEmail">Email (opzionale)</label>
+      <input type="email" id="newSupplierEmail" placeholder="email@esempio.it">
+    </div>
+    <div>
+      <label for="newSupplierPhone">Telefono (opzionale)</label>
+      <input type="tel" id="newSupplierPhone" placeholder="123-456-7890">
+    </div>
+    <div>
+      <label for="newSupplierAddress">Indirizzo (opzionale)</label>
+      <input type="text" id="newSupplierAddress" placeholder="Via, Città, CAP">
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <button id="saveNewSupplier" class="primary" style="flex:1;">Salva Fornitore</button>
+    <button id="closeNewSupplierDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
+  </div>
+</dialog>
+
+<!-- DIALOG NUOVO PRODOTTO -->
+<dialog id="newProductDialog" class="product-dialog">
+  <h2 style="margin-top:0;">Nuovo Prodotto</h2>
+  <div style="display:grid;gap:0.8rem;margin:1rem 0;">
+    <div>
+      <label for="newProductName">Nome Prodotto *</label>
+      <input type="text" id="newProductName" placeholder="Es: Pomodoro" required>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <button id="saveNewProduct" class="primary" style="flex:1;">Salva Prodotto</button>
+    <button id="closeNewProductDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
+  </div>
+</dialog>
+
+<!-- DIALOG DETTAGLI/MODIFICA FORNITORE -->
+<dialog id="supplierDetailsDialog" class="product-dialog">
+  <h2 style="margin-top:0;">Dettagli Fornitore</h2>
+  <div style="display:grid;gap:0.8rem;margin:1rem 0;">
+    <div>
+      <label for="detailSupplierName">Nome Fornitore *</label>
+      <input type="text" id="detailSupplierName" required>
+    </div>
+    <div>
+      <label for="detailSupplierEmail">Email</label>
+      <input type="email" id="detailSupplierEmail" placeholder="email@esempio.it">
+    </div>
+    <div>
+      <label for="detailSupplierPhone">Telefono</label>
+      <input type="tel" id="detailSupplierPhone" placeholder="123-456-7890">
+    </div>
+    <div>
+      <label for="detailSupplierAddress">Indirizzo</label>
+      <input type="text" id="detailSupplierAddress" placeholder="Via, Città, CAP">
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;">
+    <button id="saveSupplierDetails" class="primary" style="flex:1;">Salva Modifiche</button>
+    <button id="closeSupplierDetailsDialog" class="primary" style="flex:1;background:var(--muted);">Annulla</button>
   </div>
 </dialog>
 

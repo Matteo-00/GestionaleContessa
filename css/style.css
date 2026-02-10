@@ -1215,6 +1215,51 @@ th, td {
   border-bottom: 1px solid var(--border-light);
   color: var(--text);
   text-align: left;
+  max-width: 200px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Prezzo Cad. più stretto */
+th:nth-child(5), td:nth-child(5) {
+  max-width: 90px !important;
+}
+
+/* Quantità più stretta */
+th:nth-child(6), td:nth-child(6) {
+  max-width: 80px !important;
+}
+
+/* Descrizione più stretta */
+th:nth-child(9), td:nth-child(9) {
+  max-width: 80px !important;
+}
+
+/* Bottoni azioni senza scroll - con larghezza minima */
+th:nth-child(10), td:nth-child(10) {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  white-space: normal !important;
+  max-width: none !important;
+  min-width: 180px !important;
+}
+
+/* Header Azioni centrato */
+th:nth-child(10) {
+  text-align: center !important;
+}
+
+th::-webkit-scrollbar, td::-webkit-scrollbar {
+  height: 4px;
+}
+
+th::-webkit-scrollbar-thumb, td::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+th::-webkit-scrollbar-track, td::-webkit-scrollbar-track {
+  background: var(--card-subtle);
 }
 
 th {
@@ -1629,12 +1674,12 @@ h2 {
 .period-total-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.6rem;
-  background: linear-gradient(135deg, #e3f5ed 0%, #f5fbf8 100%);
-  border: 1px solid #b8dcc9;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  background: #f0fdf4;
+  border: 1px solid #2f7d65;
   border-radius: 12px;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--primary);
   margin-left: 0.5rem;
@@ -1643,7 +1688,7 @@ h2 {
 }
 
 .period-total-badge:hover {
-  background: linear-gradient(135deg, #d6f0e4 0%, #f0f9f5 100%);
+  background: #e6f7ed;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(47, 125, 101, 0.15);
 }
@@ -1673,11 +1718,11 @@ h2 {
 }
 
 .trends-filter {
-  padding: 0.3rem 0.5rem;
+  padding: 0.4rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 5px;
   background: white;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   color: var(--text);
   font-weight: 500;
   cursor: pointer;
@@ -1687,12 +1732,12 @@ h2 {
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
                     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 6px) calc(50%), calc(100% - 3px) calc(50%);
-  background-size: 3px 3px, 3px 3px;
+  background-position: calc(100% - 8px) calc(50%), calc(100% - 4px) calc(50%);
+  background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
-  padding-right: 1.2rem;
-  min-width: 50px;
-  max-width: 60px;
+  padding-right: 1.5rem;
+  min-width: 75px;
+  max-width: 95px;
 }
 
 .trends-filter:hover {
@@ -2764,6 +2809,31 @@ option {
 input.filter-search {
   background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="%232f7d65" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>') !important;
   background-repeat: no-repeat !important;
+
+/* ===== TABELLE FORNITORI/PRODOTTI ===== */
+.suppliers-products-table {
+  font-size: 0.9rem;
+}
+
+.suppliers-products-table th {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  padding: 0.7rem 1rem;
+}
+
+.suppliers-products-table td {
+  padding: 0.8rem 1rem;
+  max-width: 300px;
+}
+
+.suppliers-products-table tbody tr {
+  cursor: pointer;
+}
+
+.suppliers-products-table tbody tr:hover {
+  background: rgba(47, 125, 101, 0.08);
+}
   background-position: right 10px center !important;
   background-size: 14px !important;
   padding-right: 32px !important;
