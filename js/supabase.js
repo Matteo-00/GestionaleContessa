@@ -273,7 +273,7 @@ window.db = {
     // Trova l'ULTIMO acquisto per questo prodotto+fornitore
     const { data, error: fetchError } = await supabaseClient
       .from('Acquisto')
-      .select('Id, DataAcquisto, Descrizione, Qualità, rating')
+      .select('Id, DataAcquisto, Descrizione, Qualità, rating, PrezzoAl, Quantità, Unità')
       .eq('IdProdotto', idProdotto)
       .eq('IdFornitore', idFornitore)
       .order('DataAcquisto', { ascending: false })
@@ -293,6 +293,15 @@ window.db = {
     if (updates.rating !== undefined) {
       updateData.Qualità = updates.rating;
       updateData.rating = updates.rating;
+    }
+    if (updates.price !== undefined) {
+      updateData.PrezzoAl = updates.price;
+    }
+    if (updates.quantity !== undefined) {
+      updateData.Quantità = updates.quantity;
+    }
+    if (updates.unit !== undefined) {
+      updateData.Unità = updates.unit;
     }
     
     // Aggiorna l'ultimo acquisto

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Login - La Contessa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-  <meta name="theme-color" content="#2f7d65">
+  <meta name="theme-color" content="#D4C8AB">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   
@@ -15,24 +15,32 @@
   
   <style>
     :root {
-      --bg: #fafafa;
+      /* Palette Sabbia & Nero */
+      --sabbia: #D4C8AB;
+      --sabbia-dark: #C4B89B;
+      --sabbia-light: #E4D8BB;
+      --sabbia-pale: #EDE6D8;
+      --accent-warm: #B8A88A;
+      --nero: #1a1a1a;
+      
+      --bg: #FAF8F5;
       --card: #ffffff;
-      --card-subtle: #f8f9fa;
-      --primary: #2f7d65;
-      --primary-dark: #244c3a;
-      --primary-light: #3a9d7e;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --border-light: #f3f4f6;
-      --text: #1f2937;
-      --text-light: #4b5563;
-      --error: #b91c1c;
-      --error-bg: #fef2f2;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
-      --shadow-xl: 0 20px 40px -10px rgba(0,0,0,0.15);
+      --card-subtle: #F5F2ED;
+      --primary: #D4C8AB;
+      --primary-dark: #C4B89B;
+      --primary-light: #E4D8BB;
+      --muted: #8B8378;
+      --border: #E0D8C8;
+      --border-light: #EDE6D8;
+      --text: #2C2824;
+      --text-light: #6B6458;
+      --error: #C85A54;
+      --error-bg: #FFF5F5;
+      --shadow-sm: 0 2px 4px rgba(212, 200, 171, 0.1);
+      --shadow: 0 3px 8px rgba(212, 200, 171, 0.2), 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 6px 16px rgba(212, 200, 171, 0.25), 0 2px 8px rgba(0,0,0,0.1);
+      --shadow-lg: 0 12px 32px rgba(212, 200, 171, 0.3), 0 4px 12px rgba(0,0,0,0.12);
+      --shadow-xl: 0 20px 48px rgba(212, 200, 171, 0.35), 0 8px 20px rgba(0,0,0,0.15);
     }
 
     * {
@@ -44,7 +52,7 @@
     html, body {
       height: 100%;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f5f7f6;
+      background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -57,7 +65,9 @@
       min-height: 100vh;
       padding: 2rem;
       background: 
-        linear-gradient(135deg, rgba(47, 125, 101, 0.03) 0%, rgba(47, 125, 101, 0.06) 100%);
+        radial-gradient(ellipse at top, rgba(228, 216, 187, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom, rgba(212, 200, 171, 0.1) 0%, transparent 50%),
+        linear-gradient(135deg, #FAF8F5 0%, #F5F2ED 100%);
     }
 
     .login-container {
@@ -73,17 +83,33 @@
 
     .login-card {
       background: var(--card);
-      border-radius: 12px;
+      border-radius: 16px;
       box-shadow: var(--shadow-xl);
-      border: 1px solid rgba(0,0,0,0.06);
+      border: 1px solid var(--border-light);
       overflow: hidden;
+      backdrop-filter: blur(10px);
     }
 
     /* Header con logo */
     .login-header {
-      background: var(--primary);
+      background: linear-gradient(135deg, #D4C8AB 0%, #C9B88F 100%);
       padding: 2.5rem 3rem;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .login-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(255,255,255,0.1) 0%, transparent 50%);
+      pointer-events: none;
     }
 
     .logo-wrapper {
@@ -91,29 +117,32 @@
       flex-direction: column;
       align-items: center;
       gap: 1rem;
+      position: relative;
+      z-index: 1;
     }
 
     .logo-img {
       width: 48px;
       height: 48px;
       object-fit: contain;
-      filter: brightness(0) invert(1);
-      opacity: 0.95;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+      opacity: 1;
     }
 
     .login-title {
       font-family: 'Playfair Display', serif;
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 600;
-      color: white;
-      letter-spacing: 0.02em;
+      color: var(--nero);
+      letter-spacing: 0.03em;
+      text-shadow: 0 2px 8px rgba(255,255,255,0.5);
     }
 
     .login-subtitle {
       font-size: 0.8rem;
-      color: rgba(255,255,255,0.75);
-      font-weight: 400;
-      letter-spacing: 0.1em;
+      color: rgba(26, 26, 26, 0.7);
+      font-weight: 500;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
       margin-top: 0.25rem;
     }
@@ -129,11 +158,11 @@
 
     .form-label {
       display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--nero);
       margin-bottom: 0.6rem;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.02em;
     }
 
     .form-input {
@@ -144,23 +173,26 @@
       color: var(--text);
       background: var(--card-subtle);
       border: 1.5px solid var(--border);
-      border-radius: 8px;
-      transition: all 0.2s ease;
+      border-radius: 10px;
+      transition: all 0.3s ease;
       outline: none;
     }
 
     .form-input:hover {
-      border-color: #d1d5db;
+      border-color: var(--sabbia);
+      background: white;
     }
 
     .form-input:focus {
-      border-color: var(--primary);
+      border-color: #C9B88F;
       background: white;
-      box-shadow: 0 0 0 3px rgba(47, 125, 101, 0.1);
+      box-shadow: 0 0 0 4px rgba(201, 184, 143, 0.25), 0 4px 12px rgba(212, 200, 171, 0.3);
+      transform: translateY(-1px);
     }
 
     .form-input::placeholder {
-      color: #9ca3af;
+      color: var(--muted);
+      opacity: 0.7;
     }
 
     /* Password wrapper */
@@ -222,27 +254,32 @@
     /* Submit button */
     .login-btn {
       width: 100%;
-      padding: 1.1rem 1.5rem;
-      font-size: 1rem;
-      font-weight: 600;
+      padding: 1.2rem 1.5rem;
+      font-size: 1.05rem;
+      font-weight: 700;
       font-family: inherit;
       color: white;
-      background: var(--primary);
+      background: linear-gradient(135deg, #C4B89B 0%, #B8A88A 100%);
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.3s ease;
       position: relative;
       margin-top: 0.5rem;
+      box-shadow: 0 6px 20px rgba(196, 184, 155, 0.5), 0 2px 8px rgba(184, 168, 138, 0.3);
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 2px rgba(26, 26, 26, 0.15);
     }
 
     .login-btn:hover {
-      background: var(--primary-dark);
-      box-shadow: var(--shadow-md);
+      background: linear-gradient(135deg, #B8A88A 0%, #A89A7D 100%);
+      box-shadow: 0 8px 24px rgba(184, 168, 138, 0.6), 0 4px 12px rgba(168, 154, 125, 0.4);
+      transform: translateY(-3px);
     }
 
     .login-btn:active {
-      transform: scale(0.99);
+      transform: translateY(0px);
+      box-shadow: 0 2px 8px rgba(212, 200, 171, 0.4);
     }
 
     .login-btn:disabled {
@@ -284,14 +321,14 @@
     /* Footer */
     .login-footer {
       padding: 1.25rem 3rem;
-      background: var(--card-subtle);
+      background: linear-gradient(to bottom, transparent, var(--card-subtle));
       border-top: 1px solid var(--border-light);
       text-align: center;
     }
 
     .footer-text {
       font-size: 0.8rem;
-      color: var(--muted);
+      color: var(--text-light);
     }
 
     /* Credits */
@@ -299,7 +336,8 @@
       margin-top: 2rem;
       text-align: center;
       font-size: 0.75rem;
-      color: var(--muted);
+      color: var(--text-light);
+      opacity: 0.8;
     }
 
     /* Responsive */
@@ -338,7 +376,7 @@
     <!-- Header -->
     <div class="login-header">
       <div class="logo-wrapper">
-        <img src="assets/logo.png" alt="Logo La Contessa" style="width: 130px; height: 130px;" />
+        <img src="assets/IMG_5695.jpeg" alt="Logo La Contessa" style="width: 130px; height: 130px;" />
         <div>
           <h1 class="login-title">La Contessa</h1>
           <p class="login-subtitle">Gestionale Magazzino</p>
@@ -490,7 +528,7 @@
 
       // Animazione di ingresso con cerchio di pallini
       document.body.insertAdjacentHTML('beforeend', `
-        <div id="loginTransition" style="position:fixed;z-index:9999;inset:0;background:linear-gradient(135deg,#2f7d65 0%,#244c3a 100%);display:flex;align-items:center;justify-content:center;animation:fadeInOut 2.4s cubic-bezier(.4,0,.2,1);">
+        <div id="loginTransition" style="position:fixed;z-index:9999;inset:0;background:linear-gradient(135deg,#D4C8AB 0%,#C9B88F 50%,#B8A88A 100%);display:flex;align-items:center;justify-content:center;animation:fadeInOut 2.4s cubic-bezier(.4,0,.2,1);">
           <div class="loader-container">
             <div class="orbit-ring">
               <span class="dot dot-1"></span>
@@ -502,14 +540,18 @@
               <span class="dot dot-7"></span>
               <span class="dot dot-8"></span>
             </div>
-            <img src="assets/logo.png" alt="Logo La Contessa" class="transition-logo" />
+            <img src="assets/IMG_5695.jpeg" alt="Logo La Contessa" class="transition-logo" />
           </div>
         </div>
         <style>
           #loginTransition { 
             display: flex; 
             align-items: center; 
-            justify-content: center; 
+            justify-content: center;
+            background-image: 
+              radial-gradient(circle at 30% 20%, rgba(255,255,255,0.2) 0%, transparent 40%),
+              radial-gradient(circle at 70% 80%, rgba(255,255,255,0.15) 0%, transparent 40%),
+              linear-gradient(135deg, #D4C8AB 0%, #C9B88F 50%, #B8A88A 100%);
           }
           
           .loader-container {

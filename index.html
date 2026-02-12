@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Gestionale La Contessa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-  <meta name="theme-color" content="#2f7d65">
+  <meta name="theme-color" content="#D4C8AB">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
@@ -34,7 +34,7 @@
 <!-- Logo Sidebar -->
 <aside class="logo-sidebar">
   <div class="logo-container">
-    <img src="assets/logo.png" alt="Logo La Contessa" class="sidebar-logo" />
+    <img src="assets/IMG_5695.jpeg" alt="Logo La Contessa" class="sidebar-logo" />
     <div class="logo-title">La Contessa</div>
     <div class="logo-subtitle">Ristorante</div>
   </div>
@@ -183,6 +183,7 @@
       </div>
     </div>
     <!-- PARAGRAFO 3: Scansione Fattura -->
+    <!-- COMMENTATO - Non necessario per ora
     <div class="ia-tile wide-tile" style="flex:1 1 32%;min-width:280px;">
       <div class="info-header">
         <span class="info-icon">◉</span>
@@ -193,6 +194,7 @@
         <span class="ia-btn-icon">📷</span> Scansiona
       </button>
     </div>
+    -->
   </div>
 </section>
 
@@ -296,6 +298,11 @@
           </thead>
           <tbody id="suppliersTable"></tbody>
         </table>
+        <div class="pagination" style="margin-top:1rem;">
+          <button id="prevSupplierPage">←</button>
+          <span id="supplierPageInfo"></span>
+          <button id="nextSupplierPage">→</button>
+        </div>
       </div>
 
       <!-- TABELLA PRODOTTI -->
@@ -311,6 +318,11 @@
           </thead>
           <tbody id="productsTable"></tbody>
         </table>
+        <div class="pagination" style="margin-top:1rem;">
+          <button id="prevProductPage">←</button>
+          <span id="productPageInfo"></span>
+          <button id="nextProductPage">→</button>
+        </div>
       </div>
     </div>
   </div>
@@ -547,7 +559,7 @@
 <dialog id="editDialog" class="product-dialog">
   <h2 style="margin-top:0;">Modifica Prodotto</h2>
   <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:0.8rem;margin-bottom:1rem;font-size:0.85rem;">
-    <strong>⚠️ Info:</strong> Puoi modificare solo <strong>Descrizione</strong> e <strong>Qualità</strong>. Gli altri campi sono bloccati.
+    <strong>⚠️ Info:</strong> Puoi modificare <strong>Prezzo</strong>, <strong>Quantità</strong>, <strong>Unità</strong>, <strong>Descrizione</strong> e <strong>Qualità</strong> dell'ultimo acquisto. Prodotto e Fornitore sono bloccati.
   </div>
   <div style="display:grid;gap:0.8rem;margin:1rem 0;">
     <div>
@@ -560,18 +572,19 @@
     </div>
     <div>
       <label for="editPrice">Prezzo (€)</label>
-      <input type="number" id="editPrice" step="0.01" disabled style="background:#f3f4f6;cursor:not-allowed;">
+      <input type="number" id="editPrice" step="0.01" style="background:#fffbeb;border:2px solid #fbbf24;">
     </div>
     <div>
       <label for="editQuantity">Quantità</label>
-      <input type="number" id="editQuantity" step="0.01" disabled style="background:#f3f4f6;cursor:not-allowed;">
+      <input type="number" id="editQuantity" step="0.01" style="background:#fffbeb;border:2px solid #fbbf24;">
     </div>
     <div>
       <label for="editUnit">Unità</label>
-      <select id="editUnit" disabled style="background:#f3f4f6;cursor:not-allowed;">
+      <select id="editUnit" style="background:#fffbeb;border:2px solid #fbbf24;">
         <option value="kg">Kg</option>
         <option value="litri">Litro/i</option>
         <option value="pezzi">Pezzo/i</option>
+        <option value="bott">Bott.</option>
       </select>
     </div>
     <div>
@@ -672,6 +685,34 @@
   </div>
 </dialog>
 
+<!-- DIALOG AZIONI ARCHIVIO -->
+<dialog id="actionsDialog" class="actions-dialog">
+  <h2 style="margin:0 0 1.2rem 0;text-align:center;color:var(--primary);">Azioni Disponibili</h2>
+  <div class="actions-grid">
+    <button class="action-btn action-btn-acquista" id="actionAcquista">
+      <span class="action-icon">🛒</span>
+      <span class="action-text">Acquista</span>
+    </button>
+    <button class="action-btn action-btn-consuma" id="actionConsuma">
+      <span class="action-icon">📦</span>
+      <span class="action-text">Consuma</span>
+    </button>
+    <button class="action-btn action-btn-statistiche" id="actionStatistiche">
+      <span class="action-icon">📊</span>
+      <span class="action-text">Statistiche</span>
+    </button>
+    <button class="action-btn action-btn-modifica" id="actionModifica">
+      <span class="action-icon">✏️</span>
+      <span class="action-text">Modifica</span>
+    </button>
+    <button class="action-btn action-btn-elimina" id="actionElimina">
+      <span class="action-icon">🗑️</span>
+      <span class="action-text">Elimina</span>
+    </button>
+  </div>
+  <button id="closeActionsDialog" class="primary" style="margin-top:1rem;background:var(--muted);width:100%;">Chiudi</button>
+</dialog>
+
 <!-- DIALOG DETTAGLI/MODIFICA FORNITORE -->
 <dialog id="supplierDetailsDialog" class="product-dialog">
   <h2 style="margin-top:0;">Dettagli Fornitore</h2>
@@ -718,7 +759,7 @@
       transition: all 0.18s cubic-bezier(.4,0,.2,1);
       margin-left: 2.5rem;
       margin-right: 0.5rem;
-      box-shadow: 0 1px 2px rgba(47,125,101,0.03);
+      box-shadow: 0 1px 2px rgba(212, 200, 171, 0.15);
       position: relative;
       overflow: hidden;
       min-width: 48px;

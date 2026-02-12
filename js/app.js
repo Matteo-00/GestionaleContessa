@@ -249,11 +249,11 @@ if (searchProduct) {
   });
 }
 
-// Funzione per aggiornare l'elemento selezionato visivamente
+// Funzione per aggiornare l'elemento selezionato visualmente
 function updateSelectedItem(items, index) {
   items.forEach((item, i) => {
     if (i === index) {
-      item.style.backgroundColor = 'rgba(47, 125, 101, 0.15)';
+      item.style.backgroundColor = 'rgba(212, 200, 171, 0.25)';
       item.style.fontWeight = '600';
       item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } else {
@@ -623,6 +623,8 @@ savePurchase.onclick = async () => {
 
 /* ARCHIVIO + PAGINAZIONE */
 let currentPage=1, perPage=8;
+let currentSupplierPage=1, suppliersPerPage=8;
+let currentProductPage=1, productsPerPage=8;
 
 function renderArchive(){
   let data=[...purchases];
@@ -665,11 +667,9 @@ function renderArchive(){
         <td>${starsDisplay}</td>
         <td>${x.description || ''}</td>
         <td style="white-space:nowrap;">
-          <button class="view-stats-btn" data-product="${x.product}" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Statistiche</button>
-          <button class="repurchase-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#2f7d65;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Acquista</button>
+          <button class="repurchase-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#D4C8AB;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Acquista</button>
           <button class="consume-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#f59e0b;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Consuma</button>
-          <button class="edit-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Modifica</button>
-          <button class="delete-btn" data-id="${x.id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Elimina</button>
+          <button class="show-all-actions-btn" data-id="${x.id}" data-product="${x.product}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;">Mostra tutte</button>
         </td>
       </tr>`;
   });
@@ -774,8 +774,106 @@ function renderArchive(){
     };
   });
 
+  // Event listener per bottone "Mostra tutte"
+  document.querySelectorAll('.show-all-actions-btn').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      const productName = btn.dataset.product;
+      openActionsDialog(id, productName);
+    };
+  });
+
   pageInfo.textContent=`Pagina ${currentPage} / ${pages}`;
 }
+
+// ===== GESTIONE DIALOG AZIONI =====
+const actionsDialog = document.getElementById('actionsDialog');
+const closeActionsDialog = document.getElementById('closeActionsDialog');
+let currentActionId = null;
+let currentActionProduct = null;
+
+function openActionsDialog(id, productName) {
+  currentActionId = id;
+  currentActionProduct = productName;
+  actionsDialog.showModal();
+}
+
+closeActionsDialog.onclick = () => {
+  actionsDialog.close();
+};
+
+// Event listeners per i bottoni azioni nella dialog
+document.getElementById('actionAcquista').onclick = () => {
+  actionsDialog.close();
+  const purchase = purchases.find(p => p.id == currentActionId);
+  if (purchase) openRepurchaseDialog(purchase, currentActionId);
+};
+
+document.getElementById('actionConsuma').onclick = () => {
+  actionsDialog.close();
+  const purchase = purchases.find(p => p.id == currentActionId);
+  if (purchase) openConsumeDialog(purchase);
+};
+
+document.getElementById('actionStatistiche').onclick = () => {
+  actionsDialog.close();
+  const recordId = parseInt(currentActionId);
+  
+  // Salva l'ID del record selezionato per evidenziarlo
+  window.selectedRecordId = recordId;
+  
+  // Vai alla pagina statistiche
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-stats').classList.add('active');
+  navButtons.forEach(b=>b.classList.remove('active'));
+  document.querySelector('nav button[data-page="stats"]').classList.add('active');
+  
+  setTimeout(() => {
+    statsProduct.value = currentActionProduct;
+    
+    if (window.updateAnalyzeButton) {
+      window.updateAnalyzeButton();
+    }
+    
+    requestAnimationFrame(() => {
+      renderStats();
+      
+      setTimeout(() => {
+        const analyzeBtn = document.getElementById('analyzeWithAI');
+        if (analyzeBtn && !analyzeBtn.disabled) {
+          analyzeBtn.click();
+        }
+      }, 300);
+    });
+  }, 100);
+};
+
+document.getElementById('actionModifica').onclick = () => {
+  actionsDialog.close();
+  const purchase = purchases.find(p => p.id == currentActionId);
+  if (purchase) openEditDialog(purchase, currentActionId);
+};
+
+document.getElementById('actionElimina').onclick = async () => {
+  actionsDialog.close();
+  const purchase = purchases.find(p => p.id == currentActionId);
+  
+  if (purchase && confirm(`Sei sicuro di voler eliminare definitivamente TUTTI gli acquisti e consumi di "${purchase.product}" da "${purchase.supplier}"?\n\nQuesta operazione eliminerà:\n- Tutti gli acquisti storici\n- Tutti i consumi registrati\n- La riga dall'archivio\n\nATTENZIONE: Questa operazione NON può essere annullata!`)) {
+    try {
+      await db.deleteAllForProductSupplier(purchase.idProdotto, purchase.idFornitore);
+      
+      // Ricarica l'archivio
+      purchases = await db.getArchivioAggregato();
+      renderArchive();
+      renderStats();
+      
+      alert('Prodotto eliminato con successo');
+    } catch (err) {
+      console.error('Errore eliminazione:', err);
+      alert('Errore durante l\'eliminazione del prodotto: ' + err.message);
+    }
+  }
+};
 
 prevPage.onclick=()=>{ currentPage=Math.max(1,currentPage-1); renderArchive(); }
 nextPage.onclick=()=>{ 
@@ -967,11 +1065,11 @@ function renderSupplierPeriodChart() {
       datasets: [{
         label: 'Spesa (€)',
         data: values,
-        backgroundColor: 'rgba(47, 125, 101, 0.2)',
-        borderColor: '#2f7d65',
+        backgroundColor: 'rgba(212, 200, 171, 0.2)',
+        borderColor: '#D4C8AB',
         borderWidth: 2.5,
-        pointBackgroundColor: '#2f7d65',
-        pointBorderColor: '#1e5a47',
+        pointBackgroundColor: '#D4C8AB',
+        pointBorderColor: '#C4B89B',
         pointBorderWidth: 1.5,
         pointRadius: 4,
         pointHoverRadius: 6,
@@ -1067,11 +1165,11 @@ function renderProductPeriodChart() {
       datasets: [{
         label: 'Spesa (€)',
         data: values,
-        backgroundColor: 'rgba(47, 125, 101, 0.2)',
-        borderColor: '#2f7d65',
+        backgroundColor: 'rgba(212, 200, 171, 0.2)',
+        borderColor: '#D4C8AB',
         borderWidth: 2.5,
-        pointBackgroundColor: '#2f7d65',
-        pointBorderColor: '#1e5a47',
+        pointBackgroundColor: '#D4C8AB',
+        pointBorderColor: '#C4B89B',
         pointBorderWidth: 1.5,
         pointRadius: 4,
         pointHoverRadius: 6,
@@ -1146,15 +1244,15 @@ function renderMonthlyTrendStatsChart() {
       datasets: [{
         label: 'Spesa (€)',
         data: values,
-        backgroundColor: 'rgba(115, 135, 142, 0.2)',
-        borderColor: '#73878e',
+        backgroundColor: 'rgba(212, 200, 171, 0.25)',
+        borderColor: '#D4C8AB',
         borderWidth: 2.5,
-        pointBackgroundColor: '#73878e',
-        pointBorderColor: '#5a6a71',
+        pointBackgroundColor: '#D4C8AB',
+        pointBorderColor: '#C4B89B',
         pointBorderWidth: 1.5,
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#8a9ba3',
+        pointHoverBackgroundColor: '#B8A88A',
         tension: 0.4,
         fill: true
       }]
@@ -1281,15 +1379,15 @@ function renderSupplierSpendingStatsChart() {
       datasets: [{
         label: 'Spesa (€)',
         data: values,
-        backgroundColor: 'rgba(115, 135, 142, 0.2)',
-        borderColor: '#73878e',
+        backgroundColor: 'rgba(212, 200, 171, 0.25)',
+        borderColor: '#D4C8AB',
         borderWidth: 2.5,
-        pointBackgroundColor: '#73878e',
-        pointBorderColor: '#5a6a71',
+        pointBackgroundColor: '#D4C8AB',
+        pointBorderColor: '#C4B89B',
         pointBorderWidth: 1.5,
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#8a9ba3',
+        pointHoverBackgroundColor: '#B8A88A',
         tension: 0.4,
         fill: true
       }]
@@ -1416,15 +1514,15 @@ function renderTopProductsStatsChart() {
       datasets: [{
         label: 'Quantità',
         data: values,
-        backgroundColor: 'rgba(115, 135, 142, 0.2)',
-        borderColor: '#73878e',
+        backgroundColor: 'rgba(212, 200, 171, 0.25)',
+        borderColor: '#D4C8AB',
         borderWidth: 2.5,
-        pointBackgroundColor: '#73878e',
-        pointBorderColor: '#5a6a71',
+        pointBackgroundColor: '#D4C8AB',
+        pointBorderColor: '#C4B89B',
         pointBorderWidth: 1.5,
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#8a9ba3',
+        pointHoverBackgroundColor: '#B8A88A',
         tension: 0.4,
         fill: true
       }]
@@ -1547,15 +1645,15 @@ function renderOrderFrequencyStatsChart() {
       datasets: [{
         label: 'Ordini',
         data: values,
-        backgroundColor: 'rgba(115, 135, 142, 0.2)',
-        borderColor: '#73878e',
+        backgroundColor: 'rgba(212, 200, 171, 0.25)',
+        borderColor: '#D4C8AB',
         borderWidth: 2.5,
-        pointBackgroundColor: '#73878e',
-        pointBorderColor: '#5a6a71',
+        pointBackgroundColor: '#D4C8AB',
+        pointBorderColor: '#C4B89B',
         pointBorderWidth: 1.5,
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointHoverBackgroundColor: '#8a9ba3',
+        pointHoverBackgroundColor: '#B8A88A',
         tension: 0.4,
         fill: true
       }]
@@ -1741,8 +1839,52 @@ dateTo.onchange = () => renderArchive();
 const filterSupplierName = document.getElementById('filterSupplierName');
 const filterProductName = document.getElementById('filterProductName');
 
-if (filterSupplierName) filterSupplierName.oninput = () => renderSuppliersPage();
-if (filterProductName) filterProductName.oninput = () => renderProductsPage();
+if (filterSupplierName) filterSupplierName.oninput = () => { currentSupplierPage = 1; renderSuppliersPage(); };
+if (filterProductName) filterProductName.oninput = () => { currentProductPage = 1; renderProductsPage(); };
+
+// Paginazione fornitori
+const prevSupplierPage = document.getElementById('prevSupplierPage');
+const nextSupplierPage = document.getElementById('nextSupplierPage');
+if (prevSupplierPage) {
+  prevSupplierPage.onclick = () => { 
+    currentSupplierPage = Math.max(1, currentSupplierPage - 1); 
+    renderSuppliersPage(); 
+  };
+}
+if (nextSupplierPage) {
+  nextSupplierPage.onclick = () => { 
+    const nameFilter = document.getElementById('filterSupplierName')?.value.toLowerCase() || '';
+    let filteredSuppliers = [...suppliers];
+    if (nameFilter) {
+      filteredSuppliers = filteredSuppliers.filter(s => s.Nome.toLowerCase().includes(nameFilter));
+    }
+    const pages = Math.max(1, Math.ceil(filteredSuppliers.length / suppliersPerPage));
+    currentSupplierPage = Math.min(pages, currentSupplierPage + 1); 
+    renderSuppliersPage(); 
+  };
+}
+
+// Paginazione prodotti
+const prevProductPage = document.getElementById('prevProductPage');
+const nextProductPage = document.getElementById('nextProductPage');
+if (prevProductPage) {
+  prevProductPage.onclick = () => { 
+    currentProductPage = Math.max(1, currentProductPage - 1); 
+    renderProductsPage(); 
+  };
+}
+if (nextProductPage) {
+  nextProductPage.onclick = () => { 
+    const productFilter = document.getElementById('filterProductName')?.value.toLowerCase() || '';
+    let filteredProducts = [...products];
+    if (productFilter) {
+      filteredProducts = filteredProducts.filter(p => p.NomeProdotto.toLowerCase().includes(productFilter));
+    }
+    const pages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+    currentProductPage = Math.min(pages, currentProductPage + 1); 
+    renderProductsPage(); 
+  };
+}
 
 // Listener per grafici filtrabili statistiche
 const supplierChartPeriod = document.getElementById('supplierChartPeriod');
@@ -2195,15 +2337,21 @@ saveEdit.onclick = async () => {
       return;
     }
     
-    // NUOVO MODELLO: Aggiorna solo descrizione e/o qualità dell'ultimo acquisto
+    // NUOVO MODELLO: Aggiorna descrizione, qualità, prezzo, quantità e unità dell'ultimo acquisto
     const newDescription = editDescription.value;
     const newRating = parseFloat(editRating.value);
+    const newPrice = parseFloat(editPrice.value);
+    const newQuantity = parseFloat(editQuantity.value);
+    const newUnit = editUnit.value;
     
     // Controlla se qualcosa è cambiato
     const descriptionChanged = newDescription !== (purchaseToUpdate.description || '');
     const ratingChanged = newRating !== (purchaseToUpdate.rating || 0);
+    const priceChanged = newPrice !== (purchaseToUpdate.price || 0);
+    const quantityChanged = newQuantity !== (purchaseToUpdate.quantity || 0);
+    const unitChanged = newUnit !== (purchaseToUpdate.unit || 'kg');
     
-    if (!descriptionChanged && !ratingChanged) {
+    if (!descriptionChanged && !ratingChanged && !priceChanged && !quantityChanged && !unitChanged) {
       alert('Nessuna modifica da salvare');
       editDialog.close();
       return;
@@ -2226,6 +2374,21 @@ saveEdit.onclick = async () => {
     } else {
       // Mantieni quello esistente
       updates.rating = purchaseToUpdate.rating || 0;
+    }
+    
+    // Se prezzo è cambiato, includilo nell'update
+    if (priceChanged) {
+      updates.price = newPrice;
+    }
+    
+    // Se quantità è cambiata, includila nell'update
+    if (quantityChanged) {
+      updates.quantity = newQuantity;
+    }
+    
+    // Se unità è cambiata, includila nell'update
+    if (unitChanged) {
+      updates.unit = newUnit;
     }
     
     // Aggiorna l'ultimo acquisto con le nuove info
@@ -2365,6 +2528,7 @@ function renderSuppliersPage() {
   
   if (suppliers.length === 0) {
     suppliersTable.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--muted);padding:2rem;">Nessun fornitore registrato</td></tr>';
+    document.getElementById('supplierPageInfo').textContent = 'Pagina 0 / 0';
     return;
   }
   
@@ -2378,10 +2542,18 @@ function renderSuppliersPage() {
   
   if (filteredSuppliers.length === 0) {
     suppliersTable.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--muted);padding:2rem;">Nessun fornitore trovato</td></tr>';
+    document.getElementById('supplierPageInfo').textContent = 'Pagina 0 / 0';
     return;
   }
   
-  filteredSuppliers.forEach(supplier => {
+  // Calcola paginazione
+  const pages = Math.max(1, Math.ceil(filteredSuppliers.length / suppliersPerPage));
+  currentSupplierPage = Math.min(Math.max(currentSupplierPage, 1), pages);
+  
+  const start = (currentSupplierPage - 1) * suppliersPerPage;
+  const slice = filteredSuppliers.slice(start, start + suppliersPerPage);
+  
+  slice.forEach(supplier => {
     suppliersTable.innerHTML += `
       <tr class="supplier-row" data-id="${supplier.Id}">
         <td>${supplier.Nome}</td>
@@ -2399,6 +2571,8 @@ function renderSuppliersPage() {
       if (supplier) openSupplierDetailsDialog(supplier);
     };
   });
+  
+  document.getElementById('supplierPageInfo').textContent = `Pagina ${currentSupplierPage} / ${pages}`;
 }
 
 // Renderizza tabella prodotti
@@ -2410,6 +2584,7 @@ function renderProductsPage() {
   
   if (products.length === 0) {
     productsTable.innerHTML = '<tr><td style="text-align:center;color:var(--muted);padding:2rem;">Nessun prodotto registrato</td></tr>';
+    document.getElementById('productPageInfo').textContent = 'Pagina 0 / 0';
     return;
   }
   
@@ -2423,16 +2598,26 @@ function renderProductsPage() {
   
   if (filteredProducts.length === 0) {
     productsTable.innerHTML = '<tr><td style="text-align:center;color:var(--muted);padding:2rem;">Nessun prodotto trovato</td></tr>';
+    document.getElementById('productPageInfo').textContent = 'Pagina 0 / 0';
     return;
   }
   
-  filteredProducts.forEach(product => {
+  // Calcola paginazione
+  const pages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+  currentProductPage = Math.min(Math.max(currentProductPage, 1), pages);
+  
+  const start = (currentProductPage - 1) * productsPerPage;
+  const slice = filteredProducts.slice(start, start + productsPerPage);
+  
+  slice.forEach(product => {
     productsTable.innerHTML += `
       <tr>
         <td>${product.NomeProdotto}</td>
       </tr>
     `;
   });
+  
+  document.getElementById('productPageInfo').textContent = `Pagina ${currentProductPage} / ${pages}`;
 }
 
 // Apri dialog nuovo fornitore
