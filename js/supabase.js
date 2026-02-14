@@ -86,7 +86,7 @@ window.db = {
   async getAllSuppliers() {
     const { data, error } = await supabaseClient
       .from('Fornitore')
-      .select('Id, Nome, Email, Telefono, Indirizzo')
+      .select('Id, Nome, Email, Telefono, "Telefono Menager", Indirizzo')
       .order('Nome');
     
     if (error) {
@@ -100,7 +100,7 @@ window.db = {
   async getSupplierByName(nome) {
     const { data, error } = await supabaseClient
       .from('Fornitore')
-      .select('Id, Nome, Email, Telefono, Indirizzo')
+      .select('Id, Nome, Email, Telefono, "Telefono Menager", Indirizzo')
       .eq('Nome', nome)
       .single();
     
@@ -115,7 +115,7 @@ window.db = {
   async getSupplierById(id) {
     const { data, error } = await supabaseClient
       .from('Fornitore')
-      .select('Id, Nome, Email, Telefono, Indirizzo')
+      .select('Id, Nome, Email, Telefono, "Telefono Menager", Indirizzo')
       .eq('Id', id)
       .single();
     
@@ -128,13 +128,14 @@ window.db = {
   },
   
   async createSupplier(supplierData) {
-    // supplierData può essere una stringa (nome) o un oggetto {Nome, Email, Telefono, Indirizzo}
+    // supplierData può essere una stringa (nome) o un oggetto {Nome, Email, Telefono, TelefonoManager, Indirizzo}
     const insertData = typeof supplierData === 'string' 
       ? { Nome: supplierData }
       : {
           Nome: supplierData.Nome,
           Email: supplierData.Email || null,
           Telefono: supplierData.Telefono || null,
+          "Telefono Menager": supplierData.TelefonoManager || null,
           Indirizzo: supplierData.Indirizzo || null
         };
     
@@ -156,6 +157,7 @@ window.db = {
     const updateData = {
       Email: supplierData.Email || null,
       Telefono: supplierData.Telefono || null,
+      "Telefono Menager": supplierData.TelefonoManager || null,
       Indirizzo: supplierData.Indirizzo || null
     };
     
@@ -188,6 +190,21 @@ window.db = {
     
     if (error) {
       console.error('Errore eliminazione fornitore:', error);
+      throw error;
+    }
+    
+    return true;
+  },
+  
+  // Elimina prodotto (CASCADE eliminerà anche Acquisto e Consumo associati)
+  async deleteProduct(id) {
+    const { error } = await supabaseClient
+      .from('Prodotto')
+      .delete()
+      .eq('Id', id);
+    
+    if (error) {
+      console.error('Errore eliminazione prodotto:', error);
       throw error;
     }
     

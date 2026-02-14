@@ -310,7 +310,7 @@
           <thead>
             <tr>
               <th>Nome</th>
-              <th style="width:100px;">Azioni</th>
+              <th style="width:150px;">Azioni</th>
             </tr>
           </thead>
           <tbody id="suppliersTable"></tbody>
@@ -331,6 +331,7 @@
           <thead>
             <tr>
               <th>Nome Prodotto</th>
+              <th style="width:100px;">Azioni</th>
             </tr>
           </thead>
           <tbody id="productsTable"></tbody>
@@ -429,16 +430,21 @@
                 <span class="period-total-value" id="supplierPeriodTotal">€ 0</span>
               </div>
               <select id="supplierChartPeriod" class="trends-filter" style="flex-shrink:0;">
-                <option value="7">7g</option>
-                <option value="30" selected>Mese</option>
-                <option value="90">3 Mesi</option>
-                <option value="180">6 Mesi</option>
-                <option value="365">Anno</option>
+                <option value="range">Intervallo</option>
+                <option value="7">Ultimi 7 giorni</option>
+                <option value="30" selected>Ultimi 30 giorni</option>
+                <option value="90">Ultimi 90 giorni</option>
+                <option value="180">Ultimi 180 giorni</option>
+                <option value="365">Ultimi 365 giorni</option>
               </select>
             </div>
           </div>
           <input list="supplierChartDatalist" id="supplierChartSelect" class="fixed-select" placeholder="🔍 Cerca o seleziona fornitore..." style="width:100%;margin-top:0.6rem;cursor:text;">
           <datalist id="supplierChartDatalist"></datalist>
+          <div id="supplierDateRange" class="hidden" style="display:none;gap:0.5rem;margin-top:0.6rem;">
+            <input type="date" id="supplierDateFrom" style="flex:1;">
+            <input type="date" id="supplierDateTo" style="flex:1;">
+          </div>
           <div class="trends-chart-wrapper">
             <canvas id="supplierPeriodChart"></canvas>
           </div>
@@ -454,16 +460,21 @@
                 <span class="period-total-value" id="productPeriodTotal">€ 0</span>
               </div>
               <select id="productChartPeriod" class="trends-filter" style="flex-shrink:0;">
-                <option value="7">7g</option>
-                <option value="30" selected>Mese</option>
-                <option value="90">3 Mesi</option>
-                <option value="180">6 Mesi</option>
-                <option value="365">Anno</option>
+                <option value="range">Intervallo</option>
+                <option value="7">Ultimi 7 giorni</option>
+                <option value="30" selected>Ultimi 30 giorni</option>
+                <option value="90">Ultimi 90 giorni</option>
+                <option value="180">Ultimi 180 giorni</option>
+                <option value="365">Ultimi 365 giorni</option>
               </select>
             </div>
           </div>
           <input list="productChartDatalist" id="productChartSelect" class="fixed-select" placeholder="🔍 Cerca o seleziona prodotto..." style="width:100%;margin-top:0.6rem;cursor:text;">
           <datalist id="productChartDatalist"></datalist>
+          <div id="productDateRange" class="hidden" style="display:none;gap:0.5rem;margin-top:0.6rem;">
+            <input type="date" id="productDateFrom" style="flex:1;">
+            <input type="date" id="productDateTo" style="flex:1;">
+          </div>
           <div class="trends-chart-wrapper">
             <canvas id="productPeriodChart"></canvas>
           </div>
@@ -673,8 +684,12 @@
       <input type="email" id="newSupplierEmail" placeholder="email@esempio.it">
     </div>
     <div>
-      <label for="newSupplierPhone">Telefono (opzionale)</label>
+      <label for="newSupplierPhone">Telefono Fornitore (opzionale)</label>
       <input type="tel" id="newSupplierPhone" placeholder="123-456-7890">
+    </div>
+    <div>
+      <label for="newSupplierPhoneManager">Telefono Manager (opzionale)</label>
+      <input type="tel" id="newSupplierPhoneManager" placeholder="123-456-7890">
     </div>
     <div>
       <label for="newSupplierAddress">Indirizzo (opzionale)</label>
@@ -743,8 +758,12 @@
       <input type="email" id="detailSupplierEmail" placeholder="email@esempio.it">
     </div>
     <div>
-      <label for="detailSupplierPhone">Telefono</label>
+      <label for="detailSupplierPhone">Telefono Fornitore</label>
       <input type="tel" id="detailSupplierPhone" placeholder="123-456-7890">
+    </div>
+    <div>
+      <label for="detailSupplierPhoneManager">Telefono Manager</label>
+      <input type="tel" id="detailSupplierPhoneManager" placeholder="123-456-7890">
     </div>
     <div>
       <label for="detailSupplierAddress">Indirizzo</label>

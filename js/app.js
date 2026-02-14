@@ -1015,11 +1015,23 @@ function renderSupplierPeriodChart() {
   const ctx = document.getElementById('supplierPeriodChart');
   const periodSelect = document.getElementById('supplierChartPeriod');
   const supplierSelect = document.getElementById('supplierChartSelect');
+  const dateRangeDiv = document.getElementById('supplierDateRange');
+  const dateFrom = document.getElementById('supplierDateFrom');
+  const dateTo = document.getElementById('supplierDateTo');
   
   if (!ctx || !periodSelect || !supplierSelect) return;
   
+  // Mostra/nascondi date range in base alla selezione
+  const periodValue = periodSelect.value;
+  if (dateRangeDiv) {
+    if (periodValue === 'range') {
+      dateRangeDiv.style.display = 'flex';
+    } else {
+      dateRangeDiv.style.display = 'none';
+    }
+  }
+  
   const selectedSupplier = supplierSelect.value;
-  const period = parseInt(periodSelect.value);
   
   if (!selectedSupplier) {
     // Nessun fornitore selezionato, grafico vuoto
@@ -1030,15 +1042,37 @@ function renderSupplierPeriodChart() {
     return;
   }
   
-  // Filtra acquisti per fornitore e periodo
-  const now = new Date();
-  const startDate = new Date(now);
-  startDate.setDate(now.getDate() - period);
+  let filteredData;
   
-  const filteredData = purchases.filter(p => {
-    const purchaseDate = new Date(p.date);
-    return p.supplier === selectedSupplier && purchaseDate >= startDate;
-  });
+  // Filtra acquisti per fornitore e periodo
+  if (periodValue === 'range') {
+    // Filtro per intervallo di date
+    if (!dateFrom || !dateTo || !dateFrom.value || !dateTo.value) {
+      // Date non selezionate, mostra grafico vuoto o messaggio
+      if (window.supplierPeriodChartInstance) {
+        window.supplierPeriodChartInstance.destroy();
+        window.supplierPeriodChartInstance = null;
+      }
+      const totalBadge = document.getElementById('supplierPeriodTotal');
+      if (totalBadge) totalBadge.textContent = `€ 0`;
+      return;
+    }
+    
+    filteredData = purchases.filter(p => {
+      return p.supplier === selectedSupplier && p.date >= dateFrom.value && p.date <= dateTo.value;
+    });
+  } else {
+    // Filtro per giorni
+    const period = parseInt(periodValue);
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - period);
+    
+    filteredData = purchases.filter(p => {
+      const purchaseDate = new Date(p.date);
+      return p.supplier === selectedSupplier && purchaseDate >= startDate;
+    });
+  }
   
   // Raggruppa per data
   const dailySpending = {};
@@ -1115,11 +1149,23 @@ function renderProductPeriodChart() {
   const ctx = document.getElementById('productPeriodChart');
   const periodSelect = document.getElementById('productChartPeriod');
   const productSelect = document.getElementById('productChartSelect');
+  const dateRangeDiv = document.getElementById('productDateRange');
+  const dateFrom = document.getElementById('productDateFrom');
+  const dateTo = document.getElementById('productDateTo');
   
   if (!ctx || !periodSelect || !productSelect) return;
   
+  // Mostra/nascondi date range in base alla selezione
+  const periodValue = periodSelect.value;
+  if (dateRangeDiv) {
+    if (periodValue === 'range') {
+      dateRangeDiv.style.display = 'flex';
+    } else {
+      dateRangeDiv.style.display = 'none';
+    }
+  }
+  
   const selectedProduct = productSelect.value;
-  const period = parseInt(periodSelect.value);
   
   if (!selectedProduct) {
     // Nessun prodotto selezionato, grafico vuoto
@@ -1130,15 +1176,37 @@ function renderProductPeriodChart() {
     return;
   }
   
-  // Filtra acquisti per prodotto e periodo
-  const now = new Date();
-  const startDate = new Date(now);
-  startDate.setDate(now.getDate() - period);
+  let filteredData;
   
-  const filteredData = purchases.filter(p => {
-    const purchaseDate = new Date(p.date);
-    return p.product === selectedProduct && purchaseDate >= startDate;
-  });
+  // Filtra acquisti per prodotto e periodo
+  if (periodValue === 'range') {
+    // Filtro per intervallo di date
+    if (!dateFrom || !dateTo || !dateFrom.value || !dateTo.value) {
+      // Date non selezionate, mostra grafico vuoto o messaggio
+      if (window.productPeriodChartInstance) {
+        window.productPeriodChartInstance.destroy();
+        window.productPeriodChartInstance = null;
+      }
+      const totalBadge = document.getElementById('productPeriodTotal');
+      if (totalBadge) totalBadge.textContent = `€ 0`;
+      return;
+    }
+    
+    filteredData = purchases.filter(p => {
+      return p.product === selectedProduct && p.date >= dateFrom.value && p.date <= dateTo.value;
+    });
+  } else {
+    // Filtro per giorni
+    const period = parseInt(periodValue);
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - period);
+    
+    filteredData = purchases.filter(p => {
+      const purchaseDate = new Date(p.date);
+      return p.product === selectedProduct && purchaseDate >= startDate;
+    });
+  }
   
   // Raggruppa per data
   const dailySpending = {};
@@ -1931,11 +1999,20 @@ const supplierChartPeriod = document.getElementById('supplierChartPeriod');
 const supplierChartSelect = document.getElementById('supplierChartSelect');
 const productChartPeriod = document.getElementById('productChartPeriod');
 const productChartSelect = document.getElementById('productChartSelect');
+const supplierDateFrom = document.getElementById('supplierDateFrom');
+const supplierDateTo = document.getElementById('supplierDateTo');
+const productDateFrom = document.getElementById('productDateFrom');
+const productDateTo = document.getElementById('productDateTo');
 
 if (supplierChartPeriod) supplierChartPeriod.onchange = () => renderSupplierPeriodChart();
 if (supplierChartSelect) supplierChartSelect.onchange = () => renderSupplierPeriodChart();
+if (supplierDateFrom) supplierDateFrom.onchange = () => renderSupplierPeriodChart();
+if (supplierDateTo) supplierDateTo.onchange = () => renderSupplierPeriodChart();
+
 if (productChartPeriod) productChartPeriod.onchange = () => renderProductPeriodChart();
 if (productChartSelect) productChartSelect.onchange = () => renderProductPeriodChart();
+if (productDateFrom) productDateFrom.onchange = () => renderProductPeriodChart();
+if (productDateTo) productDateTo.onchange = () => renderProductPeriodChart();
 
 // Inizializzazione al caricamento - aspetta che il DOM sia pronto
 document.addEventListener('DOMContentLoaded', () => {
@@ -2541,6 +2618,7 @@ const newSupplierDialog = document.getElementById('newSupplierDialog');
 const newSupplierName = document.getElementById('newSupplierName');
 const newSupplierEmail = document.getElementById('newSupplierEmail');
 const newSupplierPhone = document.getElementById('newSupplierPhone');
+const newSupplierPhoneManager = document.getElementById('newSupplierPhoneManager');
 const newSupplierAddress = document.getElementById('newSupplierAddress');
 const saveNewSupplier = document.getElementById('saveNewSupplier');
 const closeNewSupplierDialog = document.getElementById('closeNewSupplierDialog');
@@ -2556,6 +2634,7 @@ const supplierDetailsDialog = document.getElementById('supplierDetailsDialog');
 const detailSupplierName = document.getElementById('detailSupplierName');
 const detailSupplierEmail = document.getElementById('detailSupplierEmail');
 const detailSupplierPhone = document.getElementById('detailSupplierPhone');
+const detailSupplierPhoneManager = document.getElementById('detailSupplierPhoneManager');
 const detailSupplierAddress = document.getElementById('detailSupplierAddress');
 const saveSupplierDetails = document.getElementById('saveSupplierDetails');
 const closeSupplierDetailsDialog = document.getElementById('closeSupplierDetailsDialog');
@@ -2597,7 +2676,10 @@ function renderSuppliersPage() {
     suppliersTable.innerHTML += `
       <tr class="supplier-row" data-id="${supplier.Id}">
         <td>${supplier.Nome}</td>
-        <td><button class="details-supplier-btn" data-id="${supplier.Id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;">Dettagli</button></td>
+        <td style="white-space:nowrap;">
+          <button class="details-supplier-btn" data-id="${supplier.Id}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#6b7280;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:0.3rem;">Dettagli</button>
+          <button class="delete-supplier-btn" data-id="${supplier.Id}" data-name="${supplier.Nome}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Elimina</button>
+        </td>
       </tr>
     `;
   });
@@ -2612,6 +2694,38 @@ function renderSuppliersPage() {
     };
   });
   
+  // Event listeners per bottone elimina
+  document.querySelectorAll('.delete-supplier-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const name = btn.dataset.name;
+      
+      const confirmed = confirm(`Sei sicuro di voler eliminare il fornitore "${name}"?\n\n⚠️ ATTENZIONE: Questa operazione eliminerà definitivamente tutti gli acquisti e i consumi associati a questo fornitore.\n\nQuesta azione non può essere annullata.`);
+      
+      if (confirmed) {
+        try {
+          await db.deleteSupplier(id);
+          
+          // Ricarica i dati
+          suppliers = await db.getAllSuppliers();
+          supplierNames = suppliers.map(s => s.Nome).filter(x => x).sort();
+          purchases = await db.getArchivioAggregato();
+          
+          // Re-render
+          refreshSelects();
+          renderSuppliersPage();
+          renderStats();
+          
+          alert(`Fornitore "${name}" eliminato con successo.`);
+        } catch (error) {
+          console.error('Errore eliminazione fornitore:', error);
+          alert('Errore durante l\'eliminazione del fornitore: ' + error.message);
+        }
+      }
+    };
+  });
+  
   document.getElementById('supplierPageInfo').textContent = `Pagina ${currentSupplierPage} / ${pages}`;
 }
 
@@ -2623,7 +2737,7 @@ function renderProductsPage() {
   productsTable.innerHTML = '';
   
   if (products.length === 0) {
-    productsTable.innerHTML = '<tr><td style="text-align:center;color:var(--muted);padding:2rem;">Nessun prodotto registrato</td></tr>';
+    productsTable.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--muted);padding:2rem;">Nessun prodotto registrato</td></tr>';
     document.getElementById('productPageInfo').textContent = 'Pagina 0 / 0';
     return;
   }
@@ -2637,7 +2751,7 @@ function renderProductsPage() {
   }
   
   if (filteredProducts.length === 0) {
-    productsTable.innerHTML = '<tr><td style="text-align:center;color:var(--muted);padding:2rem;">Nessun prodotto trovato</td></tr>';
+    productsTable.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--muted);padding:2rem;">Nessun prodotto trovato</td></tr>';
     document.getElementById('productPageInfo').textContent = 'Pagina 0 / 0';
     return;
   }
@@ -2653,8 +2767,43 @@ function renderProductsPage() {
     productsTable.innerHTML += `
       <tr>
         <td>${product.NomeProdotto}</td>
+        <td>
+          <button class="delete-product-btn" data-id="${product.Id}" data-name="${product.NomeProdotto}" style="padding:0.35rem 0.7rem;font-size:0.75rem;background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;">Elimina</button>
+        </td>
       </tr>
     `;
+  });
+  
+  // Event listeners per bottone elimina
+  document.querySelectorAll('.delete-product-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.id);
+      const name = btn.dataset.name;
+      
+      const confirmed = confirm(`Sei sicuro di voler eliminare il prodotto "${name}"?\n\n⚠️ ATTENZIONE: L'eliminazione di questo prodotto comporterà alterazioni sui dati dove è presente in uno o più acquisti.\n\nTutti gli acquisti associati a questo prodotto verranno eliminati definitivamente, così come i relativi consumi.\n\nQuesta azione non può essere annullata.`);
+      
+      if (confirmed) {
+        try {
+          await db.deleteProduct(id);
+          
+          // Ricarica i dati
+          products = await db.getAllProducts();
+          productNames = products.map(p => p.NomeProdotto).filter(x => x).sort();
+          purchases = await db.getArchivioAggregato();
+          
+          // Re-render
+          refreshSelects();
+          renderProductsPage();
+          renderStats();
+          
+          alert(`Prodotto "${name}" eliminato con successo.`);
+        } catch (error) {
+          console.error('Errore eliminazione prodotto:', error);
+          alert('Errore durante l\'eliminazione del prodotto: ' + error.message);
+        }
+      }
+    };
   });
   
   document.getElementById('productPageInfo').textContent = `Pagina ${currentProductPage} / ${pages}`;
@@ -2665,6 +2814,7 @@ addNewSupplierBtn.onclick = () => {
   newSupplierName.value = '';
   newSupplierEmail.value = '';
   newSupplierPhone.value = '';
+  newSupplierPhoneManager.value = '';
   newSupplierAddress.value = '';
   newSupplierDialog.showModal();
 };
@@ -2681,6 +2831,7 @@ saveNewSupplier.onclick = async () => {
       Nome: newSupplierName.value.trim(),
       Email: newSupplierEmail.value.trim() || null,
       Telefono: newSupplierPhone.value.trim() || null,
+      TelefonoManager: newSupplierPhoneManager.value.trim() || null,
       Indirizzo: newSupplierAddress.value.trim() || null
     };
     
@@ -2743,6 +2894,7 @@ function openSupplierDetailsDialog(supplier) {
   detailSupplierName.value = supplier.Nome;
   detailSupplierEmail.value = supplier.Email || '';
   detailSupplierPhone.value = supplier.Telefono || '';
+  detailSupplierPhoneManager.value = supplier['Telefono Menager'] || '';
   detailSupplierAddress.value = supplier.Indirizzo || '';
   
   supplierDetailsDialog.showModal();
@@ -2762,6 +2914,7 @@ saveSupplierDetails.onclick = async () => {
       Nome: detailSupplierName.value.trim(),
       Email: detailSupplierEmail.value.trim() || null,
       Telefono: detailSupplierPhone.value.trim() || null,
+      TelefonoManager: detailSupplierPhoneManager.value.trim() || null,
       Indirizzo: detailSupplierAddress.value.trim() || null
     };
     
