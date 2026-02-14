@@ -1347,6 +1347,57 @@ tbody tr:last-child td {
   display: block;
 }
 
+/* Clear filter buttons */
+.clear-single-filter-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.clear-single-filter-btn:hover {
+  background: var(--primary-dark);
+  transform: scale(1.1);
+}
+
+.clear-single-filter-btn:active {
+  transform: scale(0.95);
+}
+
+.clear-all-filters-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.clear-all-filters-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.clear-all-filters-btn:active {
+  transform: translateY(0);
+}
+
 /* PAGINATION */
 .pagination{
   display:flex;

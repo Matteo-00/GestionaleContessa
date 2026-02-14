@@ -202,40 +202,57 @@
 <section id="page-archive" class="page">
   <div class="card">
     <h2>Archivio Acquisti</h2>
-    <p class="subtitle">Gestisci tutti gli acquisti registrati</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <p class="subtitle" style="margin:0;">Gestisci tutti gli acquisti registrati</p>
+      <button id="clearAllFilters" class="clear-all-filters-btn" title="Azzera tutti i filtri">
+        <span style="margin-right:0.3rem;">✕</span> Azzera filtri
+      </button>
+    </div>
 
     <!-- FILTRI -->
     <div class="filters">
-      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+      <div style="display:flex;flex-direction:column;gap:0.3rem;position:relative;">
         <label for="filterProduct" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Prodotto</label>
-        <input list="filterProductDatalist" id="filterProduct" class="fixed-select filter-search" placeholder="Cerca prodotto..." style="cursor:text;">
+        <div style="display:flex;gap:0.3rem;align-items:center;">
+          <input list="filterProductDatalist" id="filterProduct" class="fixed-select filter-search" placeholder="Cerca prodotto..." style="cursor:text;flex:1;">
+          <button class="clear-single-filter-btn" data-filter="filterProduct" title="Azzera filtro prodotto">✕</button>
+        </div>
         <datalist id="filterProductDatalist"></datalist>
       </div>
-      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+      <div style="display:flex;flex-direction:column;gap:0.3rem;position:relative;">
         <label for="filterSupplier" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Fornitore</label>
-        <input list="filterSupplierDatalist" id="filterSupplier" class="fixed-select filter-search" placeholder="Cerca fornitore..." style="cursor:text;">
+        <div style="display:flex;gap:0.3rem;align-items:center;">
+          <input list="filterSupplierDatalist" id="filterSupplier" class="fixed-select filter-search" placeholder="Cerca fornitore..." style="cursor:text;flex:1;">
+          <button class="clear-single-filter-btn" data-filter="filterSupplier" title="Azzera filtro fornitore">✕</button>
+        </div>
         <datalist id="filterSupplierDatalist"></datalist>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+      <div style="display:flex;flex-direction:column;gap:0.3rem;position:relative;">
         <label for="filterPriceMode" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Prezzo</label>
-        <select id="filterPriceMode">
-          <option value="">Prezzo</option>
-          <option value="asc">Crescente</option>
-          <option value="desc">Decrescente</option>
-          <option value="exact">Prezzo esatto</option>
-        </select>
+        <div style="display:flex;gap:0.3rem;align-items:center;">
+          <select id="filterPriceMode" style="flex:1;">
+            <option value="">Prezzo</option>
+            <option value="asc">Crescente</option>
+            <option value="desc">Decrescente</option>
+            <option value="exact">Prezzo esatto</option>
+          </select>
+          <button class="clear-single-filter-btn" data-filter="filterPriceMode" title="Azzera filtro prezzo">✕</button>
+        </div>
       </div>
       <input type="number" id="filterPriceExact" class="hidden" placeholder="€ esatto">
 
-      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+      <div style="display:flex;flex-direction:column;gap:0.3rem;position:relative;">
         <label for="filterDateMode" style="font-size:0.75rem;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;">Filtro Data</label>
-        <select id="filterDateMode">
-          <option value="">Data</option>
-          <option value="recent">Più recente</option>
-          <option value="old">Meno recente</option>
-          <option value="range">Intervallo</option>
-        </select>
+        <div style="display:flex;gap:0.3rem;align-items:center;">
+          <select id="filterDateMode" style="flex:1;">
+            <option value="">Data</option>
+            <option value="recent">Più recente</option>
+            <option value="old">Meno recente</option>
+            <option value="range">Intervallo</option>
+          </select>
+          <button class="clear-single-filter-btn" data-filter="filterDateMode" title="Azzera filtro data">✕</button>
+        </div>
       </div>
       <div id="dateRange" class="hidden">
         <input type="date" id="dateFrom">

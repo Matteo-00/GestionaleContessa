@@ -1835,6 +1835,46 @@ filterDateMode.onchange = () => {
 dateFrom.onchange = () => renderArchive();
 dateTo.onchange = () => renderArchive();
 
+// Listener per pulsanti di reset filtri
+document.querySelectorAll('.clear-single-filter-btn').forEach(btn => {
+  btn.onclick = (e) => {
+    e.preventDefault();
+    const filterId = btn.getAttribute('data-filter');
+    const filterElement = document.getElementById(filterId);
+    if (filterElement) {
+      filterElement.value = '';
+      if (filterId === 'filterPriceMode') {
+        filterPriceExact.value = '';
+        filterPriceExact.classList.add('hidden');
+      }
+      if (filterId === 'filterDateMode') {
+        dateFrom.value = '';
+        dateTo.value = '';
+        dateRange.classList.add('hidden');
+      }
+      renderArchive();
+    }
+  };
+});
+
+const clearAllFiltersBtn = document.getElementById('clearAllFilters');
+if (clearAllFiltersBtn) {
+  clearAllFiltersBtn.onclick = (e) => {
+    e.preventDefault();
+    // Azzera tutti i filtri
+    filterProduct.value = '';
+    filterSupplier.value = '';
+    filterPriceMode.value = '';
+    filterPriceExact.value = '';
+    filterPriceExact.classList.add('hidden');
+    filterDateMode.value = '';
+    dateFrom.value = '';
+    dateTo.value = '';
+    dateRange.classList.add('hidden');
+    renderArchive();
+  };
+}
+
 // Listener per filtri pagina fornitori/prodotti
 const filterSupplierName = document.getElementById('filterSupplierName');
 const filterProductName = document.getElementById('filterProductName');
