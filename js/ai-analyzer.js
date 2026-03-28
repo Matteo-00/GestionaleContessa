@@ -417,7 +417,7 @@ function displayAIResults(geminiResponse, productName, allPurchases) {
                   </td>
                   <td class="supplier-cell">${rec.supplier}${isSelected ? ' <span class="selected-badge">✓ Selezionato</span>' : ''}</td>
                   <td class="price-cell">€${rec.price.toFixed(2)}</td>
-                  <td>${rec.quantity || 'N/D'} ${rec.unit || ''}</td>
+                  <td>${rec.quantity ? rec.quantity.toFixed(2) : 'N/D'} ${rec.unit || ''}</td>
                   <td>
                     <span class="quality-badge quality-${getQualityClass(rec.rating)}">
                       ${getQualityText(rec.rating)} (${rec.rating}/5)

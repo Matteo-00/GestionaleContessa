@@ -662,7 +662,7 @@ function renderArchive(){
         <td>${x.product}</td>
         <td>${x.supplier}</td>
         <td>€ ${x.price.toFixed(2)}</td>
-        <td>${x.quantity || '-'}</td>
+        <td>${x.quantity ? x.quantity.toFixed(2) : '-'}</td>
         <td>${x.unit || '-'}</td>
         <td>${starsDisplay}</td>
         <td>${x.description || ''}</td>
@@ -2545,7 +2545,7 @@ function openConsumeDialog(purchase) {
     <div style="display:grid;gap:0.5rem;">
       <p style="margin:0;"><strong>Prodotto:</strong> ${purchase.product}</p>
       <p style="margin:0;"><strong>Fornitore:</strong> ${purchase.supplier}</p>
-      <p style="margin:0;"><strong>Quantità disponibile:</strong> ${purchase.quantity} ${purchase.unit}</p>
+      <p style="margin:0;"><strong>Quantità disponibile:</strong> ${purchase.quantity.toFixed(2)} ${purchase.unit}</p>
     </div>
   `;
   
@@ -2572,7 +2572,7 @@ saveConsume.onclick = async () => {
   
   // Verifica che la quantità non superi quella disponibile
   if (qty > currentConsumeRecord.quantity) {
-    alert(`Quantità non disponibile!\nDisponibile: ${currentConsumeRecord.quantity} ${currentConsumeRecord.unit}\nRichiesta: ${qty} ${currentConsumeRecord.unit}`);
+    alert(`Quantità non disponibile!\nDisponibile: ${currentConsumeRecord.quantity.toFixed(2)} ${currentConsumeRecord.unit}\nRichiesta: ${qty} ${currentConsumeRecord.unit}`);
     return;
   }
   
