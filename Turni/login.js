@@ -2,13 +2,26 @@
 // LOGIN.JS - Login & Registrazione UI
 // ===================================
 
+// SVG eye icons per toggle password
+const eyeIcon     = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const eyeOffIcon  = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+// Toggle visibilità password
+function togglePwd(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  btn.innerHTML = isHidden ? eyeOffIcon : eyeIcon;
+}
+
 function renderLogin() {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="auth-screen">
       <div class="auth-card">
         <div class="auth-logo">
-          <div class="logo-icon">🍽️</div>
+          <img src="../assets/IMG_5695.jpeg" alt="La Contessa" class="logo-img">
           <h1>La Contessa</h1>
           <p>Gestione Turni</p>
         </div>
@@ -28,7 +41,10 @@ function renderLogin() {
             </div>
             <div class="form-group">
               <label>Password</label>
-              <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password" minlength="6">
+              <div class="pwd-wrapper">
+                <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password" minlength="6">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('loginPassword',this)" aria-label="Mostra/Nascondi password">${eyeIcon}</button>
+              </div>
             </div>
             <div class="form-error" id="loginError"></div>
             <button type="submit" class="btn btn-primary btn-full">
@@ -61,11 +77,17 @@ function renderLogin() {
             </div>
             <div class="form-group">
               <label>Password</label>
-              <input type="password" id="regPassword" placeholder="Min. 6 caratteri" required autocomplete="new-password" minlength="6">
+              <div class="pwd-wrapper">
+                <input type="password" id="regPassword" placeholder="Min. 6 caratteri" required autocomplete="new-password" minlength="6">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('regPassword',this)" aria-label="Mostra/Nascondi password">${eyeIcon}</button>
+              </div>
             </div>
             <div class="form-group">
               <label>Conferma Password</label>
-              <input type="password" id="regPasswordConf" placeholder="Ripeti password" required autocomplete="new-password" minlength="6">
+              <div class="pwd-wrapper">
+                <input type="password" id="regPasswordConf" placeholder="Ripeti password" required autocomplete="new-password" minlength="6">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('regPasswordConf',this)" aria-label="Mostra/Nascondi password">${eyeIcon}</button>
+              </div>
             </div>
 
             <!-- Selezione ruolo -->
@@ -75,7 +97,7 @@ function renderLogin() {
                 <label class="role-option" id="roleOptCameriere">
                   <input type="radio" name="ruolo" value="cameriere" checked onchange="onRuoloChange()">
                   <div class="role-option-card">
-                    <span class="role-icon">👨‍🍳</span>
+                    <span class="role-icon">🤵</span>
                     <span class="role-label">Cameriere</span>
                   </div>
                 </label>
@@ -83,7 +105,7 @@ function renderLogin() {
                   <input type="radio" name="ruolo" value="manager_turni" onchange="onRuoloChange()">
                   <div class="role-option-card">
                     <span class="role-icon">📋</span>
-                    <span class="role-label">Responsabile</span>
+                    <span class="role-label">Responsabile Turni</span>
                   </div>
                 </label>
               </div>
@@ -92,7 +114,10 @@ function renderLogin() {
             <!-- Codice responsabile (visibile solo se si sceglie Responsabile) -->
             <div class="form-group" id="managerCodeWrap" style="display:none">
               <label>Codice Responsabile</label>
-              <input type="password" id="regCodiceManager" placeholder="Inserisci il codice" autocomplete="off">
+              <div class="pwd-wrapper">
+                <input type="password" id="regCodiceManager" placeholder="Inserisci il codice" autocomplete="off">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('regCodiceManager',this)" aria-label="Mostra/Nascondi password">${eyeIcon}</button>
+              </div>
               <p style="font-size:12px;color:var(--text-muted);margin-top:4px">
                 Chiedi il codice al titolare del ristorante.
               </p>
@@ -101,7 +126,10 @@ function renderLogin() {
             <!-- Codice cameriere (sempre visibile) -->
             <div class="form-group" id="cameriereCodeWrap">
               <label>Codice di Accesso</label>
-              <input type="password" id="regCodiceCameriere" placeholder="Codice fornito dal responsabile" autocomplete="off" required>
+              <div class="pwd-wrapper">
+                <input type="password" id="regCodiceCameriere" placeholder="Codice fornito dal responsabile" autocomplete="off">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('regCodiceCameriere',this)" aria-label="Mostra/Nascondi password">${eyeIcon}</button>
+              </div>
               <p style="font-size:12px;color:var(--text-muted);margin-top:4px">
                 Chiedi il codice al responsabile prima di registrarti.
               </p>
