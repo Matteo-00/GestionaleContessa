@@ -3,6 +3,8 @@
 // ===================================
 
 let _managerView = 'dashboard';
+let _turnoSort = 'desc';        // 'desc' = più turni prima, 'asc' = meno turni prima
+let _turnoModalData = null;     // cache dati aperti nel modal
 
 async function renderManager() {
   const app = document.getElementById('app');
@@ -158,6 +160,12 @@ async function cambiaStato(nuovoStato) {
   try {
     const updated = await DB.updateStatoSettimana(AppState.settimana.settimana, nuovoStato);
     AppState.settimana = updated;
+
+    // Quando si pubblica, elimina automaticamente le settimane più vecchie (mantieni solo ultime 5)
+    if (nuovoStato === 'pubblicata') {
+      await DB.eliminaSettimaneVecchie();
+    }
+
     showToast('Stato aggiornato!', 'success');
     renderManager();
   } catch (err) {
@@ -283,47 +291,115 @@ async function confermaCreaSessione() {
 }
 
 // ===================================
+// HELPER: Badge equità turni (6 livelli)
+// ===================================
+function equityBadge(count) {
+  if (count === 0) return `<span class="equity-badge equity-0">🟢 0</span>`;
+  if (count === 1) return `<span class="equity-badge equity-1">🟡 1</span>`;
+  if (count === 2) return `<span class="equity-badge equity-2">🟠 2</span>`;
+  if (count === 3) return `<span class="equity-badge equity-3">🔴 3</span>`;
+  if (count === 4) return `<span class="equity-badge equity-4">🟣 4</span>`;
+  return `<span class="equity-badge equity-5">⚫ ${count}</span>`;
+}
+
+// Re-render solo la lista nel modal (senza riaprirlo)
+function _renderListaTurnoModal() {
+  if (!_turnoModalData) return;
+  const { tutti, equitaCounts, assegnatiIds } = _turnoModalData;
+
+  const sorted = [...tutti].sort((a, b) => {
+    const diff = (equitaCounts[a.id] || 0) - (equitaCounts[b.id] || 0);
+    return _turnoSort === 'desc' ? -diff : diff;
+  });
+
+  const listaEl = document.getElementById('disponibiliLista');
+  const btnEl   = document.getElementById('turnoSortBtn');
+  if (!listaEl) return;
+
+  listaEl.innerHTML = sorted.length
+    ? sorted.map(p => `
+        <div class="disponibile-item" onclick="toggleAssegna('${p.id}')">
+          <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${assegnatiIds.has(p.id) ? 'checked' : ''}>
+          <label for="ass_${p.id}">${p.nome} ${p.cognome}</label>
+          ${equityBadge(equitaCounts[p.id] || 0)}
+        </div>
+      `).join('')
+    : '<p style="color:var(--text-muted);font-size:14px">Nessuno disponibile.</p>';
+
+  if (btnEl) {
+    btnEl.textContent = _turnoSort === 'desc' ? '⬆ Meno turni prima' : '⬇ Più turni prima';
+  }
+}
+
+function toggleTurnoSort() {
+  _turnoSort = _turnoSort === 'desc' ? 'asc' : 'desc';
+  _renderListaTurnoModal();
+}
+
+// ===================================
 // MODAL ASSEGNAZIONE TURNO (con modifica post-pubblicazione)
 // ===================================
 async function openTurnoModal(giorno, turno) {
   const settimana = AppState.settimana;
 
-  const [disponibilita, turniAssegnati, profiles] = await Promise.all([
+  const [disponibilita, turniAssegnati, profiles, ultime5] = await Promise.all([
     DB.getDisponibilita(settimana.settimana),
     DB.getTurni(settimana.settimana),
-    DB.getAllProfiles()
+    DB.getAllProfiles(),
+    DB.getUltime5Settimane()
   ]);
+
+  // Esclude la settimana corrente dal conteggio equità (conta solo le passate)
+  const settimanePassate = ultime5.filter(s => s !== settimana.settimana);
+  const equitaCounts = await DB.getEquitaCounts(giorno, turno, settimanePassate);
 
   const dispIds     = new Set(disponibilita.filter(d => d.giorno === giorno && d.turno === turno && d.disponibile).map(d => d.user_id));
   const assegnatiIds = new Set(turniAssegnati.filter(t => t.giorno === giorno && t.turno === turno).map(t => t.user_id));
   const tutti = profiles.filter(p => dispIds.has(p.id) || assegnatiIds.has(p.id));
 
-  const emoji     = turno === 'mattina' ? '☀️' : '🌙';
-  const dataStr   = DateUtils.getDataGiorno(settimana.settimana, giorno)
-                      .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+  // Salva i dati nel cache per il sort toggle
+  _turnoModalData = { tutti, equitaCounts, assegnatiIds };
 
-  // Il manager può SEMPRE modificare i turni (anche dopo pubblicazione)
-  const listaHtml = tutti.length
-    ? tutti.map(p => `
-        <div class="disponibile-item" onclick="toggleAssegna('${p.id}')">
-          <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${assegnatiIds.has(p.id) ? 'checked' : ''}>
-          <label for="ass_${p.id}">${p.nome} ${p.cognome}</label>
-          <span class="disponibile-badge">${p.ruolo === 'manager_turni' ? 'Manager' : 'Cameriere'}</span>
-        </div>
-      `).join('')
-    : '<p style="color:var(--text-muted);font-size:14px">Nessuno disponibile.</p>';
+  const emoji   = turno === 'mattina' ? '☀️' : '🌙';
+  const dataStr = DateUtils.getDataGiorno(settimana.settimana, giorno)
+                    .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+
+  const legendaHtml = `
+    <div class="equity-legend">
+      <span class="equity-legend-title">Badge Equità — ultime ${settimanePassate.length} settimane</span>
+      <div class="equity-legend-items">
+        <span><span class="equity-badge equity-0">🟢 0</span> Mai</span>
+        <span><span class="equity-badge equity-1">🟡 1</span> Una volta</span>
+        <span><span class="equity-badge equity-2">🟠 2</span> Due volte</span>
+        <span><span class="equity-badge equity-3">🔴 3</span> Tre volte</span>
+        <span><span class="equity-badge equity-4">🟣 4</span> Quattro volte</span>
+        <span><span class="equity-badge equity-5">⚫ 5</span> Cinque su cinque</span>
+      </div>
+    </div>
+  `;
+
+  const sortLabel = _turnoSort === 'desc' ? '⬆ Meno turni prima' : '⬇ Più turni prima';
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'modalTurno';
   overlay.innerHTML = `
-    <div class="modal-sheet">
+    <div class="modal-sheet modal-sheet-tall">
       <div class="modal-handle"></div>
       <div class="modal-header">
-        <h3>${emoji} ${DateUtils.GIORNI[giorno]} ${dataStr} – ${turno === 'mattina' ? 'Mattina' : 'Sera'}</h3>
-        <p>${dispIds.size} disponibili · ${assegnatiIds.size} assegnati</p>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div>
+            <h3>${emoji} ${DateUtils.GIORNI[giorno]} ${dataStr} – ${turno === 'mattina' ? 'Mattina' : 'Sera'}</h3>
+            <p>${dispIds.size} disponibili · ${assegnatiIds.size} assegnati</p>
+          </div>
+          <button id="turnoSortBtn" class="btn btn-secondary btn-sm" style="flex-shrink:0;white-space:nowrap"
+            onclick="toggleTurnoSort()">${sortLabel}</button>
+        </div>
       </div>
-      <div class="modal-body"><div class="disponibili-list">${listaHtml}</div></div>
+      <div class="modal-body">
+        ${legendaHtml}
+        <div class="disponibili-list" id="disponibiliLista"></div>
+      </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" style="flex:1" onclick="chiudiModali()">Annulla</button>
         <button class="btn btn-primary" style="flex:2" onclick="salvaTurniModal(${giorno},'${turno}')">💾 Salva</button>
@@ -332,6 +408,9 @@ async function openTurnoModal(giorno, turno) {
   `;
   overlay.addEventListener('click', e => { if (e.target === overlay) chiudiModali(); });
   document.body.appendChild(overlay);
+
+  // Renderizza la lista con il sort corrente
+  _renderListaTurnoModal();
 }
 
 function toggleAssegna(userId) {

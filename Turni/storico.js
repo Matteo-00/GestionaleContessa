@@ -1,22 +1,21 @@
 // ===================================
-// STORICO.JS - Storico mensile completo
+// STORICO.JS - Storico ultime 5 settimane
 // ===================================
 
-async function renderStorico(vista = 'mese', payload = null) {
+async function renderStorico(vista = 'ultime5', payload = null) {
   const app = document.getElementById('app');
   app.innerHTML = renderNavbar('storico') + `<div class="page" id="pageContent">${renderLoading()}</div>`;
 
   try {
-    if (vista === 'dettaglio-mese')   await renderStoricoMeseDettaglio(payload);
-    else if (vista === 'settimana')   await renderStoricoDettaglio(payload);
-    else                              await renderStoricoHome();
+    if (vista === 'settimana') await renderStoricoDettaglio(payload);
+    else                       await renderStoricoHome();
   } catch (err) {
     document.getElementById('pageContent').innerHTML = renderEmpty('❌', 'Errore', err.message);
   }
 }
 
 // ===================================
-// HOME: statistiche mensili
+// HOME: ultime 5 settimane
 // ===================================
 async function renderStoricoHome() {
   const userId = AppState.user.id;
@@ -28,121 +27,57 @@ async function renderStoricoHome() {
     DB.getSettimaneStorico()
   ]);
 
-  // Raggruppa per mese (YYYY-MM)
-  const mesiMap = {};
+  // Mostra solo le ultime 5 settimane pubblicate
+  const ultime5 = settimane.slice(0, 5);
 
-  disponibilita.forEach(d => {
-    const mese = d.settimana.slice(0, 7); // "2026-07"
-    if (!mesiMap[mese]) mesiMap[mese] = { disp: 0, turni: 0 };
-    mesiMap[mese].disp++;
-  });
+  if (!ultime5.length) {
+    document.getElementById('pageContent').innerHTML =
+      renderEmpty('📅', 'Nessuno storico', 'Le ultime 5 settimane pubblicate appariranno qui.');
+    return;
+  }
 
-  turni.forEach(t => {
-    const mese = t.settimana.slice(0, 7);
-    if (!mesiMap[mese]) mesiMap[mese] = { disp: 0, turni: 0 };
-    mesiMap[mese].turni++;
-  });
+  const cardsHtml = ultime5.map(s => {
+    const dispSettimana  = disponibilita.filter(d => d.settimana === s.settimana);
+    const turniSettimana = turni.filter(t => t.settimana === s.settimana);
 
-  const mesiOrdinati = Object.entries(mesiMap).sort((a, b) => b[0].localeCompare(a[0]));
-
-  const totDisp  = disponibilita.length;
-  const totTurni = turni.length;
-
-  // Header statistiche totali
-  const statsHtml = `
-    <div class="stats-row">
-      <div class="stat-box">
-        <div class="stat-box-num">${totTurni}</div>
-        <div class="stat-box-label">Turni lavorati</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-box-num">${totDisp}</div>
-        <div class="stat-box-label">Disponibilità date</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-box-num">${mesiOrdinati.length}</div>
-        <div class="stat-box-label">Mesi attivi</div>
-      </div>
-    </div>
-  `;
-
-  // Card per ogni mese
-  const mesiHtml = mesiOrdinati.length
-    ? mesiOrdinati.map(([mese, dati]) => {
-        const [anno, m] = mese.split('-');
-        const nomeMese = new Date(parseInt(anno), parseInt(m)-1, 1)
-          .toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-        const percLavoro = dati.disp > 0 ? Math.round((dati.turni / dati.disp) * 100) : 0;
-        return `
-          <div class="mese-card" onclick="renderStorico('dettaglio-mese','${mese}')">
-            <div class="mese-card-header">
-              <span class="mese-nome">${nomeMese}</span>
-              <span class="mese-arrow">›</span>
-            </div>
-            <div class="mese-stats">
-              <div class="mese-stat">
-                <span class="mese-stat-num">${dati.turni}</span>
-                <span class="mese-stat-label">turni</span>
-              </div>
-              <div class="mese-divider"></div>
-              <div class="mese-stat">
-                <span class="mese-stat-num">${dati.disp}</span>
-                <span class="mese-stat-label">disponibilità</span>
-              </div>
-              <div class="mese-divider"></div>
-              <div class="mese-stat">
-                <span class="mese-stat-num">${percLavoro}%</span>
-                <span class="mese-stat-label">confermato</span>
-              </div>
-            </div>
-            <div class="progress-bar-wrap" style="margin-top:10px">
-              <div class="progress-bar-fill" style="width:${percLavoro}%"></div>
-            </div>
+    return `
+      <div class="settimana-5w-card">
+        <div class="settimana-5w-periodo">
+          ${DateUtils.rangeSettimana(s.settimana, s.data_fine)}
+        </div>
+        <div class="settimana-5w-stats">
+          <div class="settimana-5w-stat">
+            <div class="settimana-5w-num">${dispSettimana.length}</div>
+            <div class="settimana-5w-label">Disponibilità inviate</div>
           </div>
-        `;
-      }).join('')
-    : renderEmpty('📅', 'Nessuno storico', 'Le tue attività passate appariranno qui.');
-
-  // Settimane pubblicate (per tutti)
-  const settimaneHtml = settimane.length
-    ? `
-      <h2 class="section-title" style="margin-top:28px">📋 Settimane pubblicate</h2>
-      <div class="storico-list">
-        ${settimane.map(s => `
-          <div class="storico-card">
-            <div class="storico-card-header">
-              <div>
-                <h3>${DateUtils.rangeSettimana(s.settimana, s.data_fine)}</h3>
-                <p>Pubblicata il ${DateUtils.formatDataOra(s.pubblicata_il)}</p>
-              </div>
-              <span class="stato-badge stato-pubblicata">Pubblicata</span>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <button class="btn btn-secondary btn-sm" style="flex:1"
-                onclick="renderStorico('settimana','${s.settimana}')">
-                📂 Apri
-              </button>
-              ${isManager ? `
-                <button class="btn btn-secondary btn-sm" style="flex:1"
-                  onclick="esportaExcel('${s.settimana}')">
-                  📊 Excel
-                </button>
-                <button class="btn btn-secondary btn-sm" style="flex:1"
-                  onclick="esportaPDF('${s.settimana}')">
-                  🖨️ PDF
-                </button>` : ''}
-            </div>
+          <div class="settimana-5w-divider"></div>
+          <div class="settimana-5w-stat">
+            <div class="settimana-5w-num">${turniSettimana.length}</div>
+            <div class="settimana-5w-label">Turni lavorati</div>
           </div>
-        `).join('')}
-      </div>`
-    : '';
+        </div>
+        <button class="btn btn-secondary btn-full settimana-5w-btn"
+          onclick="renderStorico('settimana','${s.settimana}')">
+          📂 Apri Dettaglio
+        </button>
+      </div>
+    `;
+  }).join('');
 
   document.getElementById('pageContent').innerHTML = `
-    <h2 class="section-title">Il mio storico</h2>
-    ${statsHtml}
-    <h2 class="section-title" style="margin-top:20px">Per mese</h2>
-    ${mesiHtml}
-    ${settimaneHtml}
+    <h2 class="section-title">Ultime 5 settimane</h2>
+    ${cardsHtml}
+    ${isManager ? `
+      <div style="margin-top:24px">
+        <h2 class="section-title">Esporta</h2>
+        ${ultime5.map(s => `
+          <div class="export-row">
+            <span class="export-row-label">${DateUtils.rangeSettimana(s.settimana, s.data_fine)}</span>
+            <button class="btn btn-secondary btn-sm" onclick="esportaExcel('${s.settimana}')">📊 Excel</button>
+            <button class="btn btn-secondary btn-sm" onclick="esportaPDF('${s.settimana}')">🖨️ PDF</button>
+          </div>
+        `).join('')}
+      </div>` : ''}
   `;
 }
 
@@ -234,19 +169,55 @@ async function renderStoricoMeseDettaglio(mese) {
 }
 
 // ===================================
-// DETTAGLIO SETTIMANA (sola lettura)
+// DETTAGLIO SETTIMANA — griglia disponibilità vs turni
 // ===================================
 async function renderStoricoDettaglio(settimanaKey) {
   const userId = AppState.user.id;
   const isManager = ['manager_turni','super_admin'].includes(AppState.profile?.ruolo);
 
-  const [turni, settimane] = await Promise.all([
-    DB.getTurni(settimanaKey),
+  const [disponibilita, turni, settimane] = await Promise.all([
+    DB.getDisponibilitaUtente(userId, settimanaKey),
+    DB.getTurniUtente(userId, settimanaKey),
     DB.getSettimaneStorico()
   ]);
 
   const settimana = settimane.find(s => s.settimana === settimanaKey);
-  const mieiTurni = turni.filter(t => t.user_id === userId);
+
+  // Lookup: "giorno-turno" → true
+  const dispMap  = {};
+  disponibilita.forEach(d => { if (d.disponibile) dispMap[`${d.giorno}-${d.turno}`] = true; });
+  const turniMap = {};
+  turni.forEach(t => { turniMap[`${t.giorno}-${t.turno}`] = true; });
+
+  const giorniAttivi = DateUtils.getGiorniSessione(
+    settimanaKey,
+    settimana?.data_fine || settimanaKey
+  );
+
+  const righeGrid = giorniAttivi.map(g => {
+    const renderCella = (turno) => {
+      const haTurno = turniMap[`${g}-${turno}`];
+      const haDisp  = dispMap[`${g}-${turno}`];
+      if (haTurno)      return `<span class="tg-cell tg-cell-turno" title="Turno assegnato">🟦</span>`;
+      if (haDisp)       return `<span class="tg-cell tg-cell-disp"  title="Disponibilità inviata">🟩</span>`;
+      return `<span class="tg-cell tg-cell-empty" title="Nessuno">⬜</span>`;
+    };
+    const data = DateUtils.getDataGiorno(settimanaKey, g)
+                   .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    return `
+      <div class="tg-row">
+        <div class="tg-day">
+          <span class="tg-day-name">${DateUtils.GIORNI[g]}</span>
+          <span class="tg-day-date">${data}</span>
+        </div>
+        <div class="tg-cell-wrap">${renderCella('mattina')}</div>
+        <div class="tg-cell-wrap">${renderCella('sera')}</div>
+      </div>
+    `;
+  }).join('');
+
+  const totDisp  = disponibilita.filter(d => d.disponibile).length;
+  const totTurni = turni.length;
 
   document.getElementById('pageContent').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
@@ -256,16 +227,34 @@ async function renderStoricoDettaglio(settimanaKey) {
       </span>
     </div>
 
-    <div class="settimana-banner" style="margin-bottom:20px">
-      <div class="settimana-banner-info">
-        <h3>${DateUtils.rangeSettimana(settimanaKey, settimana?.data_fine)}</h3>
-        <p>Pubblicata il ${settimana ? DateUtils.formatDataOra(settimana.pubblicata_il) : '-'}</p>
+    <div class="stats-row" style="margin-bottom:20px">
+      <div class="stat-box">
+        <div class="stat-box-num">${totTurni}</div>
+        <div class="stat-box-label">Turni lavorati</div>
       </div>
-      <span class="stato-badge stato-pubblicata">Storico</span>
+      <div class="stat-box">
+        <div class="stat-box-num">${totDisp}</div>
+        <div class="stat-box-label">Disponibilità date</div>
+      </div>
+    </div>
+
+    <div class="tg-card">
+      <div class="tg-header">
+        <div class="tg-header-day"></div>
+        <div class="tg-header-col">☀️ Mattina</div>
+        <div class="tg-header-col">🌙 Sera</div>
+      </div>
+      ${righeGrid}
+    </div>
+
+    <div class="tg-legend">
+      <span class="tg-legend-item">🟩 Disponibilità</span>
+      <span class="tg-legend-item">🟦 Turno assegnato</span>
+      <span class="tg-legend-item">⬜ Nessuno</span>
     </div>
 
     ${isManager ? `
-      <div style="display:flex;gap:10px;margin-bottom:20px">
+      <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn btn-secondary" style="flex:1" onclick="esportaExcel('${settimanaKey}')">
           📊 Esporta Excel
         </button>
@@ -273,8 +262,5 @@ async function renderStoricoDettaglio(settimanaKey) {
           🖨️ Stampa PDF
         </button>
       </div>` : ''}
-
-    ${renderMieiTurniSection(mieiTurni, settimanaKey)}
-    ${renderTuttiTurniSection(turni, settimanaKey)}
   `;
 }

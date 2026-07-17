@@ -320,6 +320,55 @@ const DB = {
       .single();
     if (error) dbError(error, 'Errore aggiornamento scambio');
     return data;
+  },
+
+  // --- Equità Turni ---
+
+  // Restituisce i key delle ultime 5 settimane pubblicate
+  async getUltime5Settimane() {
+    const { data, error } = await sb
+      .from('settimane')
+      .select('settimana')
+      .eq('stato', 'pubblicata')
+      .order('settimana', { ascending: false })
+      .limit(5);
+    if (error) dbError(error, 'Errore ultime 5 settimane');
+    return (data || []).map(s => s.settimana);
+  },
+
+  // Per un giorno+turno specifico, restituisce {userId: conteggio} nelle ultime N settimane
+  async getEquitaCounts(giorno, turno, settimaneKeys) {
+    if (!settimaneKeys.length) return {};
+    const { data, error } = await sb
+      .from('turni')
+      .select('user_id')
+      .in('settimana', settimaneKeys)
+      .eq('giorno', parseInt(giorno))
+      .eq('turno', turno);
+    if (error) dbError(error, 'Errore conteggio equità');
+    const counts = {};
+    (data || []).forEach(t => {
+      counts[t.user_id] = (counts[t.user_id] || 0) + 1;
+    });
+    return counts;
+  },
+
+  // Elimina automaticamente le settimane più vecchie tenendo solo le ultime 5 pubblicate
+  async eliminaSettimaneVecchie() {
+    const { data, error } = await sb
+      .from('settimane')
+      .select('settimana')
+      .eq('stato', 'pubblicata')
+      .order('settimana', { ascending: true });
+    if (error) dbError(error, 'Errore pulizia settimane');
+    const tutte = (data || []).map(s => s.settimana);
+    if (tutte.length <= 5) return;
+    const daEliminare = tutte.slice(0, tutte.length - 5);
+    for (const s of daEliminare) {
+      await sb.from('disponibilita').delete().eq('settimana', s);
+      await sb.from('turni').delete().eq('settimana', s);
+      await sb.from('settimane').delete().eq('settimana', s);
+    }
   }
 };
 
