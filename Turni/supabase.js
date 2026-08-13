@@ -100,6 +100,16 @@ const DB = {
     return data || [];
   },
 
+  // Disattiva (elimina logicamente) un profilo: non compare più in nessuna lista
+  // e non può più essere usato per accedere. Non cancella l'account di autenticazione.
+  async disattivaProfilo(userId) {
+    const { error } = await sb
+      .from('profiles')
+      .update({ attivo: false })
+      .eq('id', userId);
+    if (error) dbError(error, 'Errore eliminazione utente');
+  },
+
   // --- Settimane ---
   async getSettimanaCorrente() {
     // Prende la sessione creata più di recente
@@ -144,6 +154,22 @@ const DB = {
       .order('settimana', { ascending: false });
     if (error) dbError(error, 'Errore storico settimane');
     return data || [];
+  },
+
+  // Elimina completamente e definitivamente una sessione di lavoro:
+  // turni assegnati, disponibilità inviate e richieste di scambio collegate.
+  async eliminaSessione(settimana) {
+    const { error: errScambi } = await sb.from('richieste_scambio').delete().eq('settimana', settimana);
+    if (errScambi) dbError(errScambi, 'Errore eliminazione richieste scambio');
+
+    const { error: errTurni } = await sb.from('turni').delete().eq('settimana', settimana);
+    if (errTurni) dbError(errTurni, 'Errore eliminazione turni');
+
+    const { error: errDisp } = await sb.from('disponibilita').delete().eq('settimana', settimana);
+    if (errDisp) dbError(errDisp, 'Errore eliminazione disponibilità');
+
+    const { error: errSett } = await sb.from('settimane').delete().eq('settimana', settimana);
+    if (errSett) dbError(errSett, 'Errore eliminazione sessione');
   },
 
   // --- Disponibilità ---

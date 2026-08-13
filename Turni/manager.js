@@ -16,6 +16,7 @@ async function renderManager() {
       <button class="mtab ${_managerView === 'disponibilita' ? 'active' : ''}" onclick="setManagerView('disponibilita')">👥 Disponibilità</button>
       <button class="mtab ${_managerView === 'mia-disp'      ? 'active' : ''}" onclick="setManagerView('mia-disp')">✋ La mia</button>
       <button class="mtab ${_managerView === 'scambi'        ? 'active' : ''}" onclick="setManagerView('scambi')">🔄 Scambi</button>
+      <button class="mtab ${_managerView === 'utenti'        ? 'active' : ''}" onclick="setManagerView('utenti')">🧑‍🤝‍🧑 Utenti</button>
     </div>
   `;
 
@@ -24,6 +25,7 @@ async function renderManager() {
     else if (_managerView === 'disponibilita') await renderManagerDisponibilita(tabBar);
     else if (_managerView === 'mia-disp')      await renderManagerMiaDisponibilita(tabBar);
     else if (_managerView === 'scambi')        await renderManagerScambi(tabBar);
+    else if (_managerView === 'utenti')        await renderManagerUtenti(tabBar);
   } catch (err) {
     document.getElementById('pageContent').innerHTML = tabBar + renderEmpty('❌', 'Errore', err.message);
   }
@@ -86,8 +88,9 @@ async function renderManagerDashboard(tabBar) {
       const assegnati   = (turniMap[k] || []).length;
       const cls = assegnati > 0 ? 'indicator-ok' : (disponibili > 0 ? 'indicator-warn' : 'indicator-empty');
       const emoji = turno === 'mattina' ? '☀️' : '🌙';
+      const bloccata = settimana.stato === 'in_revisione' && AppState.profile?.ruolo !== 'super_admin';
       return `
-        <div class="manager-card" onclick="openTurnoModal(${g}, '${turno}')">
+        <div class="manager-card ${bloccata ? 'manager-card-locked' : ''}" onclick="openTurnoModal(${g}, '${turno}')">
           <div class="manager-card-day">${DateUtils.GIORNI[g]}</div>
           <div class="manager-card-turno">${emoji} ${turno === 'mattina' ? 'Mattina' : 'Sera'}</div>
           <div class="manager-card-stats">
@@ -117,7 +120,7 @@ async function renderManagerDashboard(tabBar) {
 }
 
 function statoLabel(stato) {
-  return { aperta: 'Aperta', in_elaborazione: 'In elaborazione', pubblicata: 'Pubblicata' }[stato] || stato;
+  return { aperta: 'Aperta', in_elaborazione: 'In elaborazione', in_revisione: 'In revisione', pubblicata: 'Pubblicata' }[stato] || stato;
 }
 
 // ===================================
@@ -125,6 +128,7 @@ function statoLabel(stato) {
 // ===================================
 function renderStatoActions(settimana) {
   const stato = settimana.stato;
+  const isSuperAdmin = AppState.profile?.ruolo === 'super_admin';
   let html = '<div class="action-section">';
 
   if (stato === 'aperta') {
@@ -133,11 +137,32 @@ function renderStatoActions(settimana) {
       <p style="font-size:12px;color:var(--text-muted);text-align:center">Blocca le disponibilità e inizia ad assegnare i turni</p>
     `;
   } else if (stato === 'in_elaborazione') {
-    html += `
-      <button class="btn btn-success btn-full" onclick="cambiaStato('pubblicata')">✅ Pubblica Turni</button>
-      <button class="btn btn-secondary btn-full" onclick="cambiaStato('aperta')">🔓 Riapri Disponibilità</button>
-      <p style="font-size:12px;color:var(--text-muted);text-align:center">"Riapri" permette ai camerieri di modificare ancora le disponibilità</p>
-    `;
+    if (isSuperAdmin) {
+      html += `
+        <button class="btn btn-success btn-full" onclick="cambiaStato('pubblicata')">✅ Pubblica Turni</button>
+        <button class="btn btn-secondary btn-full" onclick="cambiaStato('aperta')">🔓 Riapri Disponibilità</button>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center">"Riapri" permette ai camerieri di modificare ancora le disponibilità</p>
+      `;
+    } else {
+      html += `
+        <button class="btn btn-success btn-full" onclick="inviaTurniPerRevisione()">📤 Invia Turni al Super Admin</button>
+        <button class="btn btn-secondary btn-full" onclick="cambiaStato('aperta')">🔓 Riapri Disponibilità</button>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center">Assegna i turni sulle card qui sopra, poi invia al Super Admin per la conferma finale.</p>
+      `;
+    }
+  } else if (stato === 'in_revisione') {
+    if (isSuperAdmin) {
+      html += `
+        <div class="alert-banner alert-warning">📥 Turni pronti — controllali e conferma</div>
+        <button class="btn btn-success btn-full" onclick="cambiaStato('pubblicata')">✅ Conferma e Pubblica Turni</button>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center">Puoi ancora modificare i turni cliccando sulle card prima di confermare.</p>
+      `;
+    } else {
+      html += `
+        <div class="alert-banner alert-warning">⏳ Turni inviati — in attesa di conferma del Super Admin</div>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center">Non sono più modificabili finché il Super Admin non decide.</p>
+      `;
+    }
   } else if (stato === 'pubblicata') {
     html += `
       <button class="btn btn-primary btn-full" onclick="openCreaSessioneModal()">➕ Crea Nuova Sessione</button>
@@ -145,14 +170,38 @@ function renderStatoActions(settimana) {
     `;
   }
 
+  html += `
+    <button class="btn btn-danger btn-full" style="margin-top:14px" onclick="eliminaSessioneCorrente()">🗑️ Elimina Sessione di Lavoro</button>
+  `;
+
   html += '</div>';
   return html;
 }
 
+// Il manager_turni ha finito di precompilare i turni e li invia al Super Admin
+// per la conferma finale (da quel momento non sono più modificabili dal manager).
+async function inviaTurniPerRevisione() {
+  if (!confirm('Inviare i turni al Super Admin per la conferma finale?\n\nNon potrai più modificarli finché non risponde.')) return;
+
+  try {
+    const updated = await DB.updateStatoSettimana(AppState.settimana.settimana, 'in_revisione');
+    AppState.settimana = updated;
+    showToast('Turni inviati al Super Admin!', 'success');
+    renderManager();
+  } catch (err) {
+    showToast('Errore: ' + err.message, 'error');
+  }
+}
+
 async function cambiaStato(nuovoStato) {
+  if (nuovoStato === 'pubblicata' && AppState.profile?.ruolo !== 'super_admin') {
+    showToast('Solo il Super Admin può confermare e pubblicare i turni.', 'error');
+    return;
+  }
+
   const msg = {
     in_elaborazione: 'Bloccare le disponibilità e iniziare a creare i turni?',
-    pubblicata:      'Pubblicare i turni? I camerieri potranno vederli.',
+    pubblicata:      'Confermare e pubblicare i turni? I camerieri potranno vederli.',
     aperta:          'Riaprire le disponibilità? I camerieri potranno modificarle.'
   };
   if (!confirm(msg[nuovoStato])) return;
@@ -167,6 +216,32 @@ async function cambiaStato(nuovoStato) {
     }
 
     showToast('Stato aggiornato!', 'success');
+    renderManager();
+  } catch (err) {
+    showToast('Errore: ' + err.message, 'error');
+  }
+}
+
+// Elimina definitivamente la sessione di lavoro corrente:
+// turni assegnati, disponibilità inviate e richieste di scambio collegate.
+async function eliminaSessioneCorrente() {
+  const settimana = AppState.settimana;
+  if (!settimana) return;
+
+  const ok = confirm(
+    'Sei sicuro di voler eliminare questa sessione di lavoro?\n\n' +
+    'Verranno eliminati definitivamente:\n' +
+    '• Tutti i turni assegnati\n' +
+    '• Tutte le disponibilità inviate dai camerieri\n' +
+    '• Le eventuali richieste di scambio collegate\n\n' +
+    'Questa azione NON può essere annullata.'
+  );
+  if (!ok) return;
+
+  try {
+    await DB.eliminaSessione(settimana.settimana);
+    AppState.settimana = null;
+    showToast('Sessione di lavoro eliminata.', 'success');
     renderManager();
   } catch (err) {
     showToast('Errore: ' + err.message, 'error');
@@ -305,25 +380,35 @@ function equityBadge(count) {
 // Re-render solo la lista nel modal (senza riaprirlo)
 function _renderListaTurnoModal() {
   if (!_turnoModalData) return;
-  const { tutti, equitaCounts, assegnatiIds } = _turnoModalData;
+  const { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita } = _turnoModalData;
 
-  const sorted = [...tutti].sort((a, b) => {
-    const diff = (equitaCounts[a.id] || 0) - (equitaCounts[b.id] || 0);
-    return _turnoSort === 'desc' ? -diff : diff;
-  });
+  const sorted = isWeekendEquita
+    ? [...tutti].sort((a, b) => {
+        const diff = (equitaCounts[a.id] || 0) - (equitaCounts[b.id] || 0);
+        return _turnoSort === 'desc' ? -diff : diff;
+      })
+    : [...tutti].sort((a, b) => `${a.cognome} ${a.nome}`.localeCompare(`${b.cognome} ${b.nome}`));
 
   const listaEl = document.getElementById('disponibiliLista');
   const btnEl   = document.getElementById('turnoSortBtn');
   if (!listaEl) return;
 
   listaEl.innerHTML = sorted.length
-    ? sorted.map(p => `
+    ? sorted.map(p => {
+        const count        = sessioneCounts[p.id] || 0;
+        const giaAssegnato = assegnatiIds.has(p.id);
+        const sessBadge = count > 0
+          ? `<span class="sess-count-badge" title="Turni già assegnati a questa persona in questa sessione">📌 già inserito ${count} volt${count === 1 ? 'a' : 'e'}</span>`
+          : '';
+        return `
         <div class="disponibile-item" onclick="toggleAssegna('${p.id}')">
-          <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${assegnatiIds.has(p.id) ? 'checked' : ''}>
+          <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${giaAssegnato ? 'checked' : ''}>
           <label for="ass_${p.id}">${p.nome} ${p.cognome}</label>
-          ${equityBadge(equitaCounts[p.id] || 0)}
+          ${isWeekendEquita ? equityBadge(equitaCounts[p.id] || 0) : ''}
+          ${sessBadge}
         </div>
-      `).join('')
+      `;
+      }).join('')
     : '<p style="color:var(--text-muted);font-size:14px">Nessuno disponibile.</p>';
 
   if (btnEl) {
@@ -342,29 +427,50 @@ function toggleTurnoSort() {
 async function openTurnoModal(giorno, turno) {
   const settimana = AppState.settimana;
 
+  // Una volta inviati al Super Admin per la conferma, il manager_turni non può più modificarli
+  if (settimana.stato === 'in_revisione' && AppState.profile?.ruolo !== 'super_admin') {
+    showToast('Turni inviati al Super Admin: non sono più modificabili.', 'info');
+    return;
+  }
+
+  // Il conteggio di equità (chi ha lavorato di più/meno) si applica solo
+  // ai giorni di punta: venerdì (5), sabato (6), domenica (7)
+  const isWeekendEquita = [5, 6, 7].includes(giorno);
+
   const [disponibilita, turniAssegnati, profiles, ultime5] = await Promise.all([
     DB.getDisponibilita(settimana.settimana),
     DB.getTurni(settimana.settimana),
     DB.getAllProfiles(),
-    DB.getUltime5Settimane()
+    isWeekendEquita ? DB.getUltime5Settimane() : Promise.resolve([])
   ]);
 
   // Esclude la settimana corrente dal conteggio equità (conta solo le passate)
   const settimanePassate = ultime5.filter(s => s !== settimana.settimana);
-  const equitaCounts = await DB.getEquitaCounts(giorno, turno, settimanePassate);
+  const equitaCounts = isWeekendEquita
+    ? await DB.getEquitaCounts(giorno, turno, settimanePassate)
+    : {};
 
   const dispIds     = new Set(disponibilita.filter(d => d.giorno === giorno && d.turno === turno && d.disponibile).map(d => d.user_id));
   const assegnatiIds = new Set(turniAssegnati.filter(t => t.giorno === giorno && t.turno === turno).map(t => t.user_id));
   const tutti = profiles.filter(p => dispIds.has(p.id) || assegnatiIds.has(p.id));
 
+  // Conteggio dei turni già assegnati a ciascuna persona in QUESTA sessione
+  // (escluso il giorno/turno che si sta modificando ora) — solo indicativo,
+  // nessun tetto massimo: serve a far vedere quante volte è già stata inserita
+  const sessioneCounts = {};
+  turniAssegnati.forEach(t => {
+    if (t.giorno === giorno && t.turno === turno) return;
+    sessioneCounts[t.user_id] = (sessioneCounts[t.user_id] || 0) + 1;
+  });
+
   // Salva i dati nel cache per il sort toggle
-  _turnoModalData = { tutti, equitaCounts, assegnatiIds };
+  _turnoModalData = { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita };
 
   const emoji   = turno === 'mattina' ? '☀️' : '🌙';
   const dataStr = DateUtils.getDataGiorno(settimana.settimana, giorno)
                     .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
 
-  const legendaHtml = `
+  const legendaHtml = isWeekendEquita ? `
     <div class="equity-legend">
       <span class="equity-legend-title">Badge Equità — ultime ${settimanePassate.length} settimane</span>
       <div class="equity-legend-items">
@@ -376,6 +482,10 @@ async function openTurnoModal(giorno, turno) {
         <span><span class="equity-badge equity-5">⚫ 5</span> Cinque su cinque</span>
       </div>
     </div>
+  ` : `
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+      ℹ️ Il conteggio di equità è attivo solo per venerdì, sabato e domenica.
+    </p>
   `;
 
   const sortLabel = _turnoSort === 'desc' ? '⬆ Meno turni prima' : '⬇ Più turni prima';
@@ -392,8 +502,8 @@ async function openTurnoModal(giorno, turno) {
             <h3>${emoji} ${DateUtils.GIORNI[giorno]} ${dataStr} – ${turno === 'mattina' ? 'Mattina' : 'Sera'}</h3>
             <p>${dispIds.size} disponibili · ${assegnatiIds.size} assegnati</p>
           </div>
-          <button id="turnoSortBtn" class="btn btn-secondary btn-sm" style="flex-shrink:0;white-space:nowrap"
-            onclick="toggleTurnoSort()">${sortLabel}</button>
+          ${isWeekendEquita ? `<button id="turnoSortBtn" class="btn btn-secondary btn-sm" style="flex-shrink:0;white-space:nowrap"
+            onclick="toggleTurnoSort()">${sortLabel}</button>` : ''}
         </div>
       </div>
       <div class="modal-body">
@@ -660,5 +770,65 @@ async function eseguiScambioDB(r) {
       { user_id: r.user_ricevente, settimana, giorno: r.giorno_cedente,  turno: r.turno_cedente },
       { user_id: r.user_cedente,   settimana, giorno: r.giorno_ricevente, turno: r.turno_ricevente }
     ]);
+  }
+}
+
+// ===================================
+// GESTIONE UTENTI — super_admin vede tutti ed elimina tutti,
+// manager_turni vede tutti ma elimina solo i camerieri
+// ===================================
+async function renderManagerUtenti(tabBar) {
+  const profiles    = await DB.getAllProfiles();
+  const ruoloMio    = AppState.profile?.ruolo;
+  const isSuperAdmin = ruoloMio === 'super_admin';
+
+  const ruoloLabel = r => ({
+    super_admin:   '👑 Super Admin',
+    manager_turni: '📋 Responsabile Turni',
+    cameriere:     '🤵 Cameriere'
+  }[r] || r);
+
+  const righe = profiles.map(p => {
+    const isSelf       = p.id === AppState.user.id;
+    const puoEliminare = !isSelf && (isSuperAdmin || (ruoloMio === 'manager_turni' && p.ruolo === 'cameriere'));
+    const nomeSicuro   = `${p.nome || ''} ${p.cognome || ''}`.trim().replace(/'/g, "\\'");
+
+    return `
+      <div class="recap-item">
+        <div class="recap-icon icon-ok">${(p.nome || '?').charAt(0).toUpperCase()}</div>
+        <div style="flex:1">
+          <span class="recap-name">${p.nome} ${p.cognome}</span>
+          <div style="font-size:12px;color:var(--text-muted)">${ruoloLabel(p.ruolo)}${isSelf ? ' · Tu' : ''}</div>
+        </div>
+        ${puoEliminare ? `<button class="btn btn-danger btn-sm" onclick="eliminaUtente('${p.id}','${nomeSicuro}')">🗑️ Elimina</button>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('pageContent').innerHTML = `
+    ${tabBar}
+    <h2 class="section-title">Utenti</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+      ${isSuperAdmin ? 'Puoi eliminare qualsiasi utente.' : 'Puoi eliminare solo i camerieri.'}
+    </p>
+    <div class="recap-list">
+      ${righe || '<p style="padding:16px;color:var(--text-muted)">Nessun utente.</p>'}
+    </div>
+  `;
+}
+
+async function eliminaUtente(userId, nomeCompleto) {
+  const ok = confirm(
+    `Sei sicuro di voler eliminare l'utente ${nomeCompleto}?\n\n` +
+    'Non potrà più accedere all\'app e sarà rimosso da tutte le liste.'
+  );
+  if (!ok) return;
+
+  try {
+    await DB.disattivaProfilo(userId);
+    showToast('Utente eliminato.', 'success');
+    renderManager();
+  } catch (err) {
+    showToast('Errore: ' + err.message, 'error');
   }
 }

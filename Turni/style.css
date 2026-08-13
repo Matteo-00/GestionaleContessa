@@ -516,6 +516,7 @@ input::placeholder { color: var(--text-muted); }
 
 .stato-aperta { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
 .stato-in_elaborazione { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+.stato-in_revisione { background: #F3E5F5; color: #6A1B9A; border: 1px solid #CE93D8; }
 .stato-pubblicata { background: var(--info-bg); color: var(--info); border: 1px solid #C0D4F8; }
 
 /* ========================================
@@ -724,6 +725,13 @@ input::placeholder { color: var(--text-muted); }
   transform: scale(0.97);
   box-shadow: var(--shadow-md);
 }
+
+.manager-card-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.manager-card-locked:active { transform: none; }
 
 .manager-card-day {
   font-size: 12px;
@@ -1609,6 +1617,24 @@ input::placeholder { color: var(--text-muted); }
 .equity-3 { background: #FFEBEE; color: #B71C1C; border: 1.5px solid #EF9A9A; }
 .equity-4 { background: #F3E5F5; color: #6A1B9A; border: 1.5px solid #CE93D8; }
 .equity-5 { background: #212121; color: #FFFFFF; border: 1.5px solid #424242; }
+
+/* ========================================
+   CONTATORE TURNI PER SESSIONE — quante volte già inserito
+   ======================================== */
+.sess-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: var(--card-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* Legenda badge equità (nell'header del modal) */
 .equity-legend {

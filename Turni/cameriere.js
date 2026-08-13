@@ -24,7 +24,7 @@ async function renderCameriere() {
 
   if (stato === 'aperta') {
     await renderCameriereAperta();
-  } else if (stato === 'in_elaborazione') {
+  } else if (stato === 'in_elaborazione' || stato === 'in_revisione') {
     renderCameriereElaborazione();
   } else if (stato === 'pubblicata') {
     await renderCamerierePublicata();
