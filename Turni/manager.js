@@ -56,9 +56,10 @@ async function renderManagerDashboard(tabBar) {
     return;
   }
 
-  const [disponibilita, turni] = await Promise.all([
+  const [disponibilita, turni, configs] = await Promise.all([
     DB.getDisponibilita(settimana.settimana),
-    DB.getTurni(settimana.settimana)
+    DB.getTurni(settimana.settimana),
+    DB.getAllTurniConfig(settimana.settimana)
   ]);
 
   const giorniAttivi = DateUtils.getGiorniSessione(
@@ -81,12 +82,19 @@ async function renderManagerDashboard(tabBar) {
     turniMap[k].push(t.user_id);
   });
 
+  const configMap = {};
+  configs.forEach(c => { configMap[`${c.giorno}-${c.turno}`] = c.camerieri_richiesti; });
+
   const cards = giorniAttivi.flatMap(g =>
     ['mattina', 'sera'].map(turno => {
       const k = `${g}-${turno}`;
       const disponibili = (dispMap[k] || []).length;
       const assegnati   = (turniMap[k] || []).length;
-      const cls = assegnati > 0 ? 'indicator-ok' : (disponibili > 0 ? 'indicator-warn' : 'indicator-empty');
+      const req         = configMap[k] || 0;
+      const cls = req > 0
+        ? (assegnati >= req ? 'indicator-ok' : (assegnati > 0 ? 'indicator-warn' : 'indicator-empty'))
+        : (assegnati > 0 ? 'indicator-ok' : (disponibili > 0 ? 'indicator-warn' : 'indicator-empty'));
+      const assegnatiTxt = req > 0 ? `${assegnati} / ${req}` : `${assegnati}`;
       const emoji = turno === 'mattina' ? '☀️' : '🌙';
       const bloccata = settimana.stato === 'in_revisione' && AppState.profile?.ruolo !== 'super_admin';
       return `
@@ -97,7 +105,7 @@ async function renderManagerDashboard(tabBar) {
             <div class="stat-line"><span>Disponibili</span><strong>${disponibili}</strong></div>
             <div class="stat-line">
               <span>Assegnati</span>
-              <strong>${assegnati} <span class="card-indicator ${cls}"></span></strong>
+              <strong>${assegnatiTxt} <span class="card-indicator ${cls}"></span></strong>
             </div>
           </div>
         </div>
@@ -437,19 +445,92 @@ function toggleTurnoSort() {
 }
 
 // ===================================
-// MODAL ASSEGNAZIONE TURNO (con modifica post-pubblicazione)
+// MODAL ASSEGNAZIONE TURNO — gateway con richiesta numero previsto
 // ===================================
 async function openTurnoModal(giorno, turno) {
   const settimana = AppState.settimana;
 
-  // Una volta inviati al Super Admin per la conferma, il manager_turni non può più modificarli
   if (settimana.stato === 'in_revisione' && AppState.profile?.ruolo !== 'super_admin') {
     showToast('Turni inviati al Super Admin: non sono più modificabili.', 'info');
     return;
   }
 
-  // Il conteggio di equità (chi ha lavorato di più/meno) si applica solo
-  // ai giorni di punta: venerdì (5), sabato (6), domenica (7)
+  const emoji   = turno === 'mattina' ? '☀️' : '🌙';
+  const dataStr = DateUtils.getDataGiorno(settimana.settimana, giorno)
+                    .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+
+  // Leggi la configurazione dal DB
+  const config = await DB.getTurnoConfig(settimana.settimana, giorno, turno);
+
+  if (config === null) {
+    // Prima volta: mostra il dialogo obbligatorio per impostare il numero
+    _showSetRequiredDialog(giorno, turno, dataStr, emoji);
+  } else {
+    // Configurazione già presente: apri direttamente il modal
+    await _openTurnoModalFull(giorno, turno, config.camerieri_richiesti);
+  }
+}
+
+// Dialog obbligatorio "quanti camerieri servono?"
+function _showSetRequiredDialog(giorno, turno, dataStr, emoji) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalSetRequired';
+  overlay.dataset.giorno = giorno;
+  overlay.dataset.turno  = turno;
+  overlay.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>${emoji} ${DateUtils.GIORNI[giorno]} ${dataStr} – ${turno === 'mattina' ? 'Mattina' : 'Sera'}</h3>
+        <p>Prima di iniziare, quanti camerieri servono per questo turno?</p>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px">
+        <input type="number" id="req-count-input" min="1" max="99" placeholder="es. 4"
+          class="req-count-big-input"
+          oninput="this.classList.remove('input-error')">
+        <p style="font-size:13px;color:var(--text-muted);text-align:center;max-width:260px">
+          Inserisci il numero di camerieri necessari.<br>Potrai modificarlo in seguito direttamente dal turno.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('modalSetRequired')?.remove()">Annulla</button>
+        <button class="btn btn-primary" style="flex:2" onclick="_confirmSetRequired()">✅ Conferma e apri</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('req-count-input')?.focus(), 120);
+}
+
+async function _confirmSetRequired() {
+  const overlay = document.getElementById('modalSetRequired');
+  if (!overlay) return;
+  const giorno = parseInt(overlay.dataset.giorno);
+  const turno  = overlay.dataset.turno;
+  const input  = document.getElementById('req-count-input');
+  const val    = parseInt(input?.value || '0', 10);
+  if (!val || val < 1) {
+    input?.classList.add('input-error');
+    input?.focus();
+    showToast('Inserisci almeno 1 cameriere.', 'info');
+    return;
+  }
+  try {
+    await DB.setTurnoConfig(AppState.settimana.settimana, giorno, turno, val);
+    overlay.remove();
+    await _openTurnoModalFull(giorno, turno, val);
+  } catch (err) {
+    showToast('Errore: ' + err.message, 'error');
+  }
+}
+
+// Il vero modal di assegnazione turno
+async function _openTurnoModalFull(giorno, turno, requiredCount) {
+  const settimana = AppState.settimana;
+
+  // Il conteggio di equità si applica solo ai giorni di punta: ven (5), sab (6), dom (7)
   const isWeekendEquita = [5, 6, 7].includes(giorno);
 
   const [disponibilita, turniAssegnati, profiles, ultime5] = await Promise.all([
@@ -459,41 +540,31 @@ async function openTurnoModal(giorno, turno) {
     isWeekendEquita ? DB.getUltime5Settimane() : Promise.resolve([])
   ]);
 
-  // Esclude la settimana corrente dal conteggio equità (conta solo le passate)
   const settimanePassate = ultime5.filter(s => s !== settimana.settimana);
   const equitaCounts = isWeekendEquita
     ? await DB.getEquitaCounts(giorno, turno, settimanePassate)
     : {};
 
-  const dispIds     = new Set(disponibilita.filter(d => d.giorno === giorno && d.turno === turno && d.disponibile).map(d => d.user_id));
+  const dispIds      = new Set(disponibilita.filter(d => d.giorno === giorno && d.turno === turno && d.disponibile).map(d => d.user_id));
   const assegnatiIds = new Set(turniAssegnati.filter(t => t.giorno === giorno && t.turno === turno).map(t => t.user_id));
-  const tutti = profiles.filter(p => dispIds.has(p.id) || assegnatiIds.has(p.id));
+  const tutti        = profiles.filter(p => dispIds.has(p.id) || assegnatiIds.has(p.id));
 
-  // Conteggio dei turni già assegnati a ciascuna persona in QUESTA sessione
-  // (escluso il giorno/turno che si sta modificando ora) — solo indicativo
   const sessioneCounts = {};
   turniAssegnati.forEach(t => {
     if (t.giorno === giorno && t.turno === turno) return;
     sessioneCounts[t.user_id] = (sessioneCounts[t.user_id] || 0) + 1;
   });
 
-  // Conteggio disponibilità settimanali per persona
   const weeklyDispCounts = {};
   disponibilita.filter(d => d.disponibile).forEach(d => {
     weeklyDispCounts[d.user_id] = (weeklyDispCounts[d.user_id] || 0) + 1;
   });
 
-  // Mappa profili per id
   const profilesMap = {};
   profiles.forEach(p => { profilesMap[p.id] = p; });
 
-  // Giorni attivi della sessione
   const giorniAttivi = DateUtils.getGiorniSessione(settimana.settimana, settimana.data_fine || settimana.settimana);
 
-  // Numero previsto di camerieri (da localStorage)
-  const requiredCount = _getRequiredCount(settimana.settimana, giorno, turno);
-
-  // Salva i dati nel cache per il sort toggle e le funzioni di supporto
   _turnoModalData = {
     tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita,
     weeklyDispCounts, profilesMap, giorniAttivi,
@@ -544,10 +615,9 @@ async function openTurnoModal(giorno, turno) {
               <span id="turnoCounter" class="turno-counter ${counterCls}">${counterTxt}</span>
             </p>
             <div class="previsti-row">
-              <label>Previsti:</label>
-              <input type="number" id="previsti-input" value="${requiredCount || ''}" min="0" max="99"
-                oninput="aggiornaPrevisti()" placeholder="–">
-              <button class="btn btn-secondary btn-sm" onclick="apriDettaglioAssegnati()">👥 Dettaglio</button>
+              <span>Previsti: <strong id="previsti-display">${requiredCount || '–'}</strong></span>
+              <button class="btn btn-secondary btn-sm" onclick="apriModificaNumero()">✏️ Modifica</button>
+              <button class="btn btn-secondary btn-sm" onclick="apriDettaglioAssegnati()">👥 Chi c'è</button>
             </div>
           </div>
           ${isWeekendEquita ? `<button id="turnoSortBtn" class="btn btn-secondary btn-sm" style="flex-shrink:0;white-space:nowrap"
@@ -572,7 +642,6 @@ async function openTurnoModal(giorno, turno) {
   overlay.addEventListener('click', e => { if (e.target === overlay) chiudiModali(); });
   document.body.appendChild(overlay);
 
-  // Renderizza la lista con il sort corrente
   _renderListaTurnoModal();
 }
 
@@ -588,6 +657,8 @@ function chiudiModali() {
   document.getElementById('modalDispCompleta')?.remove();
   document.getElementById('modalDettaglio')?.remove();
   document.getElementById('modalAnteprima')?.remove();
+  document.getElementById('modalModificaNumero')?.remove();
+  document.getElementById('modalSetRequired')?.remove();
 }
 
 // Alias usato da storico e altri file
@@ -907,23 +978,53 @@ async function eliminaUtente(userId, nomeCompleto) {
 // ===================================
 // GESTIONE NUMERO PREVISTO CAMERIERI PER TURNO
 // ===================================
-function _getRequiredCount(settimana, giorno, turno) {
-  return parseInt(localStorage.getItem(`req_${settimana}_${giorno}_${turno}`) || '0', 10);
-}
-
-function _setRequiredCount(settimana, giorno, turno, count) {
-  localStorage.setItem(`req_${settimana}_${giorno}_${turno}`, count);
-}
-
-function aggiornaPrevisti() {
+function apriModificaNumero() {
   if (!_turnoModalData) return;
-  const input = document.getElementById('previsti-input');
-  if (!input) return;
-  const val = Math.max(0, parseInt(input.value || '0', 10) || 0);
+  const { currentGiorno, currentTurno, requiredCount } = _turnoModalData;
+  const emoji = currentTurno === 'mattina' ? '☀️' : '🌙';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalModificaNumero';
+  overlay.style.zIndex = '300';
+  overlay.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>✏️ Modifica numero camerieri</h3>
+        <p>${emoji} ${DateUtils.GIORNI[currentGiorno]} – ${currentTurno === 'mattina' ? 'Mattina' : 'Sera'}</p>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 20px">
+        <input type="number" id="req-count-modifica" value="${requiredCount || ''}" min="0" max="99"
+          placeholder="es. 4" class="req-count-big-input">
+        <p style="font-size:12px;color:var(--text-muted);text-align:center">0 = nessun limite specifico</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('modalModificaNumero')?.remove()">Annulla</button>
+        <button class="btn btn-primary" style="flex:2" onclick="_salvaModificaNumero()">\u2705 Aggiorna</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('req-count-modifica')?.focus(), 120);
+}
+
+async function _salvaModificaNumero() {
+  const input = document.getElementById('req-count-modifica');
+  const val = Math.max(0, parseInt(input?.value || '0', 10) || 0);
   const { settimanaKey, currentGiorno, currentTurno } = _turnoModalData;
-  _setRequiredCount(settimanaKey, currentGiorno, currentTurno, val);
-  _turnoModalData.requiredCount = val;
-  _updateTurnoCounter();
+  try {
+    await DB.setTurnoConfig(settimanaKey, currentGiorno, currentTurno, val);
+    _turnoModalData.requiredCount = val;
+    document.getElementById('modalModificaNumero')?.remove();
+    const displayEl = document.getElementById('previsti-display');
+    if (displayEl) displayEl.textContent = val || '–';
+    _updateTurnoCounter();
+    showToast('Numero aggiornato!', 'success');
+  } catch (err) {
+    showToast('Errore: ' + err.message, 'error');
+  }
 }
 
 function _updateTurnoCounter() {

@@ -168,8 +168,44 @@ const DB = {
     const { error: errDisp } = await sb.from('disponibilita').delete().eq('settimana', settimana);
     if (errDisp) dbError(errDisp, 'Errore eliminazione disponibilità');
 
+    const { error: errConf } = await sb.from('turni_configurazione').delete().eq('settimana', settimana);
+    if (errConf) dbError(errConf, 'Errore eliminazione config turni');
+
     const { error: errSett } = await sb.from('settimane').delete().eq('settimana', settimana);
     if (errSett) dbError(errSett, 'Errore eliminazione sessione');
+  },
+
+  // --- Configurazione Turni (numero camerieri previsti) ---
+  async getTurnoConfig(settimana, giorno, turno) {
+    const { data, error } = await sb
+      .from('turni_configurazione')
+      .select('*')
+      .eq('settimana', settimana)
+      .eq('giorno', parseInt(giorno))
+      .eq('turno', turno)
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') dbError(error, 'Errore config turno');
+    return data; // null se non esiste
+  },
+
+  async setTurnoConfig(settimana, giorno, turno, camerieri_richiesti) {
+    const { data, error } = await sb
+      .from('turni_configurazione')
+      .upsert({ settimana, giorno: parseInt(giorno), turno, camerieri_richiesti },
+               { onConflict: 'settimana,giorno,turno' })
+      .select()
+      .single();
+    if (error) dbError(error, 'Errore salvataggio config turno');
+    return data;
+  },
+
+  async getAllTurniConfig(settimana) {
+    const { data, error } = await sb
+      .from('turni_configurazione')
+      .select('*')
+      .eq('settimana', settimana);
+    if (error) dbError(error, 'Errore config turni sessione');
+    return data || [];
   },
 
   // --- Disponibilità ---

@@ -1689,7 +1689,7 @@ input::placeholder { color: var(--text-muted); }
   border-color: var(--error-border);
 }
 
-/* Row "Previsti: [input] [Dettaglio]" */
+/* Row "Previsti: X [✏️ Modifica] [👥 Chi c'è]" */
 .previsti-row {
   display: flex;
   align-items: center;
@@ -1700,16 +1700,29 @@ input::placeholder { color: var(--text-muted); }
   font-weight: 500;
 }
 
-.previsti-row input[type="number"] {
-  width: 52px;
-  padding: 4px 6px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+/* Grande input numerico nei dialog "Quanti camerieri?" */
+.req-count-big-input {
+  width: 110px;
+  padding: 14px 10px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
   background: var(--bg);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 36px;
+  font-weight: 800;
   text-align: center;
   color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.req-count-big-input:focus {
+  outline: none;
+  border-color: var(--sabbia-dark);
+}
+
+.req-count-big-input.input-error {
+  border-color: var(--error);
+  background: var(--error-bg);
 }
 
 /* Legenda mini sopra la lista (🟢🔴⚪) */
