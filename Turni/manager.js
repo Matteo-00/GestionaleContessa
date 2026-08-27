@@ -13,6 +13,7 @@ async function renderManager() {
   const tabBar = `
     <div class="manager-tabs">
       <button class="mtab ${_managerView === 'dashboard'     ? 'active' : ''}" onclick="setManagerView('dashboard')">📋 Turni</button>
+      <button class="mtab ${_managerView === 'miei-turni'   ? 'active' : ''}" onclick="setManagerView('miei-turni')">🗓️ I miei turni</button>
       <button class="mtab ${_managerView === 'disponibilita' ? 'active' : ''}" onclick="setManagerView('disponibilita')">👥 Disponibilità</button>
       <button class="mtab ${_managerView === 'mia-disp'      ? 'active' : ''}" onclick="setManagerView('mia-disp')">✋ La mia</button>
       <button class="mtab ${_managerView === 'scambi'        ? 'active' : ''}" onclick="setManagerView('scambi')">🔄 Scambi</button>
@@ -22,6 +23,7 @@ async function renderManager() {
 
   try {
     if      (_managerView === 'dashboard')     await renderManagerDashboard(tabBar);
+    else if (_managerView === 'miei-turni')    await renderManagerMieiTurni(tabBar);
     else if (_managerView === 'disponibilita') await renderManagerDisponibilita(tabBar);
     else if (_managerView === 'mia-disp')      await renderManagerMiaDisponibilita(tabBar);
     else if (_managerView === 'scambi')        await renderManagerScambi(tabBar);
@@ -690,6 +692,75 @@ async function salvaTurniModal(giorno, turno) {
   } catch (err) {
     showToast('Errore: ' + err.message, 'error');
   }
+}
+
+// ===================================
+// I MIEI TURNI — vista manager (come cameriere pubblicata)
+// ===================================
+async function renderManagerMieiTurni(tabBar) {
+  const settimana = AppState.settimana;
+  const userId    = AppState.user.id;
+
+  if (!settimana) {
+    document.getElementById('pageContent').innerHTML = tabBar + renderEmpty('📅', 'Nessuna sessione attiva', 'Crea una sessione dalla scheda Turni.');
+    return;
+  }
+
+  const [tuttiTurni, mieiTurni] = await Promise.all([
+    DB.getTurni(settimana.settimana),
+    DB.getTurniUtente(userId, settimana.settimana)
+  ]);
+
+  const count = mieiTurni.length;
+  const statoCorrente = settimana.stato;
+
+  const avvisoHtml = (statoCorrente === 'in_elaborazione' || statoCorrente === 'in_revisione')
+    ? `<div class="alert-banner alert-warning">⏳ Turni ancora in lavorazione — il quadro potrebbe cambiare</div>`
+    : '';
+
+  document.getElementById('pageContent').innerHTML = `
+    ${tabBar}
+    <div class="settimana-banner">
+      <div class="settimana-banner-info">
+        <h3>${DateUtils.rangeSettimana(settimana.settimana, settimana.data_fine)}</h3>
+        <p>I turni in cui sei inserito</p>
+      </div>
+      <span class="stato-badge stato-${settimana.stato}">${statoLabel(settimana.stato)}</span>
+    </div>
+    ${avvisoHtml}
+
+    <div class="collapsible-section">
+      <div class="collapsible-header" onclick="toggleSection('mgr_miei_turni')">
+        <div class="collapsible-header-left">
+          <span class="collapsible-icon-wrap">🗓️</span>
+          <div>
+            <span class="collapsible-title">I miei turni</span>
+            <span class="collapsible-sub">${count} turno${count !== 1 ? 'i' : ''} assegnato${count !== 1 ? 'i' : ''}</span>
+          </div>
+        </div>
+        <span class="collapsible-toggle" id="mgr_miei_turni_icon">▲</span>
+      </div>
+      <div id="mgr_miei_turni" class="collapsible-body">
+        ${buildMieiTurniContent(mieiTurni, settimana.settimana)}
+      </div>
+    </div>
+
+    <div class="collapsible-section">
+      <div class="collapsible-header" onclick="toggleSection('mgr_tutti_turni')">
+        <div class="collapsible-header-left">
+          <span class="collapsible-icon-wrap">👥</span>
+          <div>
+            <span class="collapsible-title">Turni della settimana</span>
+            <span class="collapsible-sub">Tocca per vedere chi lavora</span>
+          </div>
+        </div>
+        <span class="collapsible-toggle" id="mgr_tutti_turni_icon">▼</span>
+      </div>
+      <div id="mgr_tutti_turni" class="collapsible-body" style="display:none">
+        ${buildTuttiTurniContent(tuttiTurni, settimana.settimana)}
+      </div>
+    </div>
+  `;
 }
 
 // ===================================
