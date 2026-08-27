@@ -1590,6 +1590,304 @@ input::placeholder { color: var(--text-muted); }
   .manager-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
+/* ========================================
+   DISPONIBILE ITEM WRAP — checkbox + vedi disp. button
+   ======================================== */
+.disponibile-item-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-sm);
+}
+
+.disponibile-item-wrap .disponibile-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.disponibile-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.disponibile-item-info label {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.disponibile-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+/* Badge disponibilità settimanali */
+.avail-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: var(--info-bg);
+  color: var(--info);
+  border: 1px solid #C0D5F5;
+  white-space: nowrap;
+}
+
+/* Pulsante "Vedi disponibilità" nella lista del modal */
+.btn-disp-detail {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--card-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-disp-detail:active { background: var(--border); }
+
+/* ========================================
+   CONTATORE PREVISTI / ASSEGNATI
+   ======================================== */
+.turno-counter {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: var(--card-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+}
+
+.counter-progress {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-color: var(--warning-border);
+}
+
+.counter-ok {
+  background: var(--success-bg);
+  color: var(--success);
+  border-color: var(--success-border);
+}
+
+.counter-over {
+  background: var(--error-bg);
+  color: var(--error);
+  border-color: var(--error-border);
+}
+
+/* Row "Previsti: [input] [Dettaglio]" */
+.previsti-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.previsti-row input[type="number"] {
+  width: 52px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+}
+
+/* Legenda mini sopra la lista (🟢🔴⚪) */
+.disp-legenda-turno {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.dlt-item {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.dlt-available { background: var(--success-bg); color: #2A7A50; border: 1px solid var(--success-border); }
+.dlt-assigned  { background: var(--error-bg);   color: var(--error); border: 1px solid var(--error-border); }
+.dlt-none      { background: var(--card-subtle); color: var(--text-muted); border: 1px solid var(--border-light); }
+
+/* ========================================
+   MODAL DISPONIBILITÀ COMPLETA SETTIMANALE
+   ======================================== */
+.disp-legenda {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.disp-legend-item {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.disp-week-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.disp-week-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.disp-week-day {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 78px;
+  padding-top: 10px;
+}
+
+.disp-slots {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.disp-slot {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.disp-slot small {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+.slot-available {
+  background: var(--success-bg);
+  color: #2A7A50;
+  border: 1px solid var(--success-border);
+}
+
+.slot-assigned {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
+
+.slot-unavailable {
+  background: var(--card-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+}
+
+.slot-current {
+  background: #FFF8E0;
+  color: #7A6000;
+  border: 2px solid #D4B800;
+}
+
+/* ========================================
+   ANTEPRIMA SETTIMANA — riepilogo per cameriere
+   ======================================== */
+.anteprima-person {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.anteprima-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.anteprima-header:active { background: var(--card-subtle); }
+
+.anteprima-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.anteprima-count {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--sabbia-pale);
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.anteprima-toggle {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.anteprima-dettaglio {
+  padding: 0 16px 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.anteprima-turno {
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-light);
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 500;
+}
+
+.anteprima-turno:last-child { border-bottom: none; }
+
+.anteprima-senza {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--card-subtle);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
 /* --- iOS safe area --- */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .tab-bar { padding-bottom: 0; }

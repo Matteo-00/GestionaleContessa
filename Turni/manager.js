@@ -115,6 +115,9 @@ async function renderManagerDashboard(tabBar) {
       <span class="stato-badge stato-${settimana.stato}">${statoLabel(settimana.stato)}</span>
     </div>
     <div class="manager-grid">${cards}</div>
+    <div style="margin:0 0 8px">
+      <button class="btn btn-secondary btn-full" onclick="openAnteprima()">📊 Anteprima Settimana</button>
+    </div>
     ${renderStatoActions(settimana)}
   `;
 }
@@ -380,7 +383,7 @@ function equityBadge(count) {
 // Re-render solo la lista nel modal (senza riaprirlo)
 function _renderListaTurnoModal() {
   if (!_turnoModalData) return;
-  const { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita } = _turnoModalData;
+  const { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita, weeklyDispCounts } = _turnoModalData;
 
   const sorted = isWeekendEquita
     ? [...tutti].sort((a, b) => {
@@ -397,15 +400,25 @@ function _renderListaTurnoModal() {
     ? sorted.map(p => {
         const count        = sessioneCounts[p.id] || 0;
         const giaAssegnato = assegnatiIds.has(p.id);
-        const sessBadge = count > 0
-          ? `<span class="sess-count-badge" title="Turni già assegnati a questa persona in questa sessione">📌 già inserito ${count} volt${count === 1 ? 'a' : 'e'}</span>`
+        const nomeEsc      = `${p.nome} ${p.cognome}`.replace(/'/g, "\\'");
+        const dispCount    = weeklyDispCounts ? (weeklyDispCounts[p.id] || 0) : 0;
+        const sessBadge    = count > 0
+          ? `<span class="sess-count-badge" title="Turni già assegnati in questa sessione">📌 ${count}×</span>`
           : '';
         return `
-        <div class="disponibile-item" onclick="toggleAssegna('${p.id}')">
-          <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${giaAssegnato ? 'checked' : ''}>
-          <label for="ass_${p.id}">${p.nome} ${p.cognome}</label>
-          ${isWeekendEquita ? equityBadge(equitaCounts[p.id] || 0) : ''}
-          ${sessBadge}
+        <div class="disponibile-item-wrap">
+          <div class="disponibile-item" onclick="toggleAssegna('${p.id}')">
+            <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${giaAssegnato ? 'checked' : ''}>
+            <div class="disponibile-item-info">
+              <label for="ass_${p.id}">${p.nome} ${p.cognome}</label>
+              <div class="disponibile-badges">
+                ${isWeekendEquita ? equityBadge(equitaCounts[p.id] || 0) : ''}
+                ${sessBadge}
+                <span class="avail-count-badge" title="Disponibilità totali questa settimana">📅 ${dispCount} disp.</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn-disp-detail" onclick="apriDispCompleta('${p.id}','${nomeEsc}')">📅 Vedi</button>
         </div>
       `;
       }).join('')
@@ -414,6 +427,8 @@ function _renderListaTurnoModal() {
   if (btnEl) {
     btnEl.textContent = _turnoSort === 'desc' ? '⬆ Meno turni prima' : '⬇ Più turni prima';
   }
+
+  _updateTurnoCounter();
 }
 
 function toggleTurnoSort() {
@@ -455,22 +470,43 @@ async function openTurnoModal(giorno, turno) {
   const tutti = profiles.filter(p => dispIds.has(p.id) || assegnatiIds.has(p.id));
 
   // Conteggio dei turni già assegnati a ciascuna persona in QUESTA sessione
-  // (escluso il giorno/turno che si sta modificando ora) — solo indicativo,
-  // nessun tetto massimo: serve a far vedere quante volte è già stata inserita
+  // (escluso il giorno/turno che si sta modificando ora) — solo indicativo
   const sessioneCounts = {};
   turniAssegnati.forEach(t => {
     if (t.giorno === giorno && t.turno === turno) return;
     sessioneCounts[t.user_id] = (sessioneCounts[t.user_id] || 0) + 1;
   });
 
-  // Salva i dati nel cache per il sort toggle
-  _turnoModalData = { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita };
+  // Conteggio disponibilità settimanali per persona
+  const weeklyDispCounts = {};
+  disponibilita.filter(d => d.disponibile).forEach(d => {
+    weeklyDispCounts[d.user_id] = (weeklyDispCounts[d.user_id] || 0) + 1;
+  });
+
+  // Mappa profili per id
+  const profilesMap = {};
+  profiles.forEach(p => { profilesMap[p.id] = p; });
+
+  // Giorni attivi della sessione
+  const giorniAttivi = DateUtils.getGiorniSessione(settimana.settimana, settimana.data_fine || settimana.settimana);
+
+  // Numero previsto di camerieri (da localStorage)
+  const requiredCount = _getRequiredCount(settimana.settimana, giorno, turno);
+
+  // Salva i dati nel cache per il sort toggle e le funzioni di supporto
+  _turnoModalData = {
+    tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita,
+    weeklyDispCounts, profilesMap, giorniAttivi,
+    dispSettimana: disponibilita, turniSettimana: turniAssegnati,
+    currentGiorno: giorno, currentTurno: turno,
+    settimanaKey: settimana.settimana, requiredCount
+  };
 
   const emoji   = turno === 'mattina' ? '☀️' : '🌙';
   const dataStr = DateUtils.getDataGiorno(settimana.settimana, giorno)
                     .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
 
-  const legendaHtml = isWeekendEquita ? `
+  const legendaEquitaHtml = isWeekendEquita ? `
     <div class="equity-legend">
       <span class="equity-legend-title">Badge Equità — ultime ${settimanePassate.length} settimane</span>
       <div class="equity-legend-items">
@@ -482,13 +518,16 @@ async function openTurnoModal(giorno, turno) {
         <span><span class="equity-badge equity-5">⚫ 5</span> Cinque su cinque</span>
       </div>
     </div>
-  ` : `
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
-      ℹ️ Il conteggio di equità è attivo solo per venerdì, sabato e domenica.
-    </p>
-  `;
+  ` : '';
 
   const sortLabel = _turnoSort === 'desc' ? '⬆ Meno turni prima' : '⬇ Più turni prima';
+
+  const counterCls = requiredCount > 0
+    ? (assegnatiIds.size >= requiredCount ? 'counter-ok' : 'counter-progress')
+    : '';
+  const counterTxt = requiredCount > 0
+    ? `${assegnatiIds.size} / ${requiredCount}`
+    : `${assegnatiIds.size} assegnati`;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -498,16 +537,30 @@ async function openTurnoModal(giorno, turno) {
       <div class="modal-handle"></div>
       <div class="modal-header">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-          <div>
+          <div style="flex:1;min-width:0">
             <h3>${emoji} ${DateUtils.GIORNI[giorno]} ${dataStr} – ${turno === 'mattina' ? 'Mattina' : 'Sera'}</h3>
-            <p>${dispIds.size} disponibili · ${assegnatiIds.size} assegnati</p>
+            <p style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span>${dispIds.size} disponibili</span>
+              <span id="turnoCounter" class="turno-counter ${counterCls}">${counterTxt}</span>
+            </p>
+            <div class="previsti-row">
+              <label>Previsti:</label>
+              <input type="number" id="previsti-input" value="${requiredCount || ''}" min="0" max="99"
+                oninput="aggiornaPrevisti()" placeholder="–">
+              <button class="btn btn-secondary btn-sm" onclick="apriDettaglioAssegnati()">👥 Dettaglio</button>
+            </div>
           </div>
           ${isWeekendEquita ? `<button id="turnoSortBtn" class="btn btn-secondary btn-sm" style="flex-shrink:0;white-space:nowrap"
             onclick="toggleTurnoSort()">${sortLabel}</button>` : ''}
         </div>
       </div>
       <div class="modal-body">
-        ${legendaHtml}
+        <div class="disp-legenda-turno">
+          <span class="dlt-item dlt-available">🟢 Disponibile</span>
+          <span class="dlt-item dlt-assigned">🔴 Già inserita</span>
+          <span class="dlt-item dlt-none">⚪ Non disponibile</span>
+        </div>
+        ${legendaEquitaHtml}
         <div class="disponibili-list" id="disponibiliLista"></div>
       </div>
       <div class="modal-footer">
@@ -526,11 +579,15 @@ async function openTurnoModal(giorno, turno) {
 function toggleAssegna(userId) {
   const cb = document.getElementById(`ass_${userId}`);
   if (cb) cb.checked = !cb.checked;
+  _updateTurnoCounter();
 }
 
 function chiudiModali() {
   document.getElementById('modalTurno')?.remove();
   document.getElementById('modalSessione')?.remove();
+  document.getElementById('modalDispCompleta')?.remove();
+  document.getElementById('modalDettaglio')?.remove();
+  document.getElementById('modalAnteprima')?.remove();
 }
 
 // Alias usato da storico e altri file
@@ -538,13 +595,23 @@ function closeModal() { chiudiModali(); }
 
 async function salvaTurniModal(giorno, turno) {
   const settimana = AppState.settimana;
-  await DB.deleteTurni(settimana.settimana, giorno, turno);
 
   const selezionati = Array.from(document.querySelectorAll('.checkbox-assegna'))
     .filter(cb => cb.checked)
     .map(cb => ({ user_id: cb.id.replace('ass_', ''), settimana: settimana.settimana, giorno, turno }));
 
+  // Controllo sovrannumero rispetto ai previsti
+  const req = _turnoModalData?.requiredCount || 0;
+  if (req > 0 && selezionati.length > req) {
+    const extra = selezionati.length - req;
+    const ok = confirm(
+      `⚠️ Stai inserendo ${extra} camerier${extra === 1 ? 'e' : 'i'} in più rispetto ai ${req} previsti.\nVuoi aggiunger${extra === 1 ? 'lo' : 'li'} comunque?`
+    );
+    if (!ok) return;
+  }
+
   try {
+    await DB.deleteTurni(settimana.settimana, giorno, turno);
     if (selezionati.length > 0) await DB.upsertTurni(selezionati);
     chiudiModali();
     showToast('Turno salvato!', 'success');
@@ -580,12 +647,16 @@ async function renderManagerDisponibilita(tabBar) {
   const renderGruppo = (grp, titolo) => !grp.length ? '' : `
     <div class="recap-list" style="margin-bottom:12px">
       <div class="recap-group-title">${titolo}</div>
-      ${grp.map(p => `
+      ${grp.map(p => {
+        const haInviato = hannoInviato.has(p.id);
+        const nomeEsc = `${p.nome} ${p.cognome}`.replace(/'/g, "\\'");
+        return `
         <div class="recap-item">
-          <div class="recap-icon ${hannoInviato.has(p.id) ? 'icon-ok' : 'icon-no'}">${hannoInviato.has(p.id) ? '✓' : '✗'}</div>
-          <span class="recap-name">${p.nome} ${p.cognome}</span>
+          <div class="recap-icon ${haInviato ? 'icon-ok' : 'icon-no'}">${haInviato ? '✓' : '✗'}</div>
+          <span class="recap-name" style="flex:1">${p.nome} ${p.cognome}</span>
+          ${haInviato ? `<button class="btn btn-secondary btn-sm" onclick="openDispModalStandalone('${p.id}','${nomeEsc}')">📅 Vedi</button>` : ''}
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
   `;
 
@@ -831,4 +902,261 @@ async function eliminaUtente(userId, nomeCompleto) {
   } catch (err) {
     showToast('Errore: ' + err.message, 'error');
   }
+}
+
+// ===================================
+// GESTIONE NUMERO PREVISTO CAMERIERI PER TURNO
+// ===================================
+function _getRequiredCount(settimana, giorno, turno) {
+  return parseInt(localStorage.getItem(`req_${settimana}_${giorno}_${turno}`) || '0', 10);
+}
+
+function _setRequiredCount(settimana, giorno, turno, count) {
+  localStorage.setItem(`req_${settimana}_${giorno}_${turno}`, count);
+}
+
+function aggiornaPrevisti() {
+  if (!_turnoModalData) return;
+  const input = document.getElementById('previsti-input');
+  if (!input) return;
+  const val = Math.max(0, parseInt(input.value || '0', 10) || 0);
+  const { settimanaKey, currentGiorno, currentTurno } = _turnoModalData;
+  _setRequiredCount(settimanaKey, currentGiorno, currentTurno, val);
+  _turnoModalData.requiredCount = val;
+  _updateTurnoCounter();
+}
+
+function _updateTurnoCounter() {
+  if (!_turnoModalData) return;
+  const checked = document.querySelectorAll('.checkbox-assegna:checked').length;
+  const el = document.getElementById('turnoCounter');
+  if (!el) return;
+  const req = _turnoModalData.requiredCount || 0;
+  if (req > 0) {
+    el.textContent = `${checked} / ${req}`;
+    el.className = checked > req ? 'turno-counter counter-over'
+                 : checked >= req ? 'turno-counter counter-ok'
+                 : 'turno-counter counter-progress';
+  } else {
+    el.textContent = `${checked} assegnati`;
+    el.className = 'turno-counter';
+  }
+}
+
+function apriDettaglioAssegnati() {
+  if (!_turnoModalData) return;
+  const { tutti, profilesMap } = _turnoModalData;
+  const checked = Array.from(document.querySelectorAll('.checkbox-assegna:checked'))
+    .map(cb => cb.id.replace('ass_', ''));
+
+  const nomi = checked.map(id => {
+    const p = profilesMap[id] || tutti.find(u => u.id === id);
+    return p ? `${p.nome} ${p.cognome}` : id;
+  });
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalDettaglio';
+  overlay.style.zIndex = '300';
+  overlay.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>👥 Camerieri assegnati (${nomi.length})</h3>
+      </div>
+      <div class="modal-body">
+        ${nomi.length
+          ? nomi.map(n => `<div class="recap-item"><div class="recap-icon icon-ok">✓</div><span class="recap-name">${n}</span></div>`).join('')
+          : '<p style="color:var(--text-muted)">Nessuno ancora selezionato.</p>'}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-full" onclick="document.getElementById('modalDettaglio')?.remove()">Chiudi</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ===================================
+// DISPONIBILITÀ COMPLETA SETTIMANALE — modal per singola persona
+// ===================================
+function apriDispCompleta(userId, nomeCompleto) {
+  if (!_turnoModalData) return;
+  const { giorniAttivi, dispSettimana, turniSettimana, currentGiorno, currentTurno } = _turnoModalData;
+  openDisponibilitaCompletaModal(userId, nomeCompleto, {
+    giorniAttivi, dispSettimana, turniSettimana, currentGiorno, currentTurno
+  });
+}
+
+async function openDispModalStandalone(userId, nomeCompleto) {
+  const settimana = AppState.settimana;
+  if (!settimana) return;
+  const giorniAttivi = DateUtils.getGiorniSessione(settimana.settimana, settimana.data_fine || settimana.settimana);
+  const [dispSettimana, turniSettimana] = await Promise.all([
+    DB.getDisponibilita(settimana.settimana),
+    DB.getTurni(settimana.settimana)
+  ]);
+  openDisponibilitaCompletaModal(userId, nomeCompleto, {
+    giorniAttivi, dispSettimana, turniSettimana, currentGiorno: null, currentTurno: null
+  });
+}
+
+function openDisponibilitaCompletaModal(userId, nomeCompleto, ctx) {
+  const { giorniAttivi, dispSettimana, turniSettimana, currentGiorno, currentTurno } = ctx;
+
+  const userDisp = new Set();
+  dispSettimana.filter(d => d.user_id === userId && d.disponibile).forEach(d => {
+    userDisp.add(`${d.giorno}-${d.turno}`);
+  });
+
+  const userAssigned = {};
+  turniSettimana.filter(t => t.user_id === userId).forEach(t => {
+    if (t.giorno === currentGiorno && t.turno === currentTurno) return;
+    userAssigned[`${t.giorno}-${t.turno}`] = `${DateUtils.GIORNI[t.giorno]} ${t.turno === 'mattina' ? 'mattina' : 'sera'}`;
+  });
+
+  const renderSlot = (g, turno) => {
+    const k = `${g}-${turno}`;
+    const isCurrent  = g === currentGiorno && turno === currentTurno;
+    const isAssigned = userAssigned[k];
+    const isAvailable = userDisp.has(k);
+    const emoji = turno === 'mattina' ? '☀️' : '🌙';
+    const label = turno === 'mattina' ? 'Mattina' : 'Sera';
+
+    if (isCurrent) {
+      return `<div class="disp-slot slot-current">${emoji} ${label}<br><small>✨ Turno corrente</small></div>`;
+    } else if (isAssigned) {
+      return `<div class="disp-slot slot-assigned">${emoji} ${label}<br><small>Già inserita – ${isAssigned}</small></div>`;
+    } else if (isAvailable) {
+      return `<div class="disp-slot slot-available">${emoji} ${label}<br><small>Disponibile</small></div>`;
+    } else {
+      return `<div class="disp-slot slot-unavailable">${emoji} ${label}<br><small>Non disponibile</small></div>`;
+    }
+  };
+
+  const rows = giorniAttivi.map(g => `
+    <div class="disp-week-row">
+      <span class="disp-week-day">${DateUtils.GIORNI[g]}</span>
+      <div class="disp-slots">
+        ${renderSlot(g, 'mattina')}
+        ${renderSlot(g, 'sera')}
+      </div>
+    </div>
+  `).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalDispCompleta';
+  overlay.style.zIndex = '300';
+  overlay.innerHTML = `
+    <div class="modal-sheet modal-sheet-tall">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>📅 ${nomeCompleto}</h3>
+        <p>Disponibilità settimanale completa</p>
+      </div>
+      <div class="modal-body">
+        <div class="disp-legenda">
+          <span class="disp-legend-item slot-available">🟢 Disponibile</span>
+          <span class="disp-legend-item slot-assigned">🔴 Già inserita</span>
+          <span class="disp-legend-item slot-unavailable">⚪ Non disponibile</span>
+          ${currentGiorno !== null ? '<span class="disp-legend-item slot-current">✨ Turno corrente</span>' : ''}
+        </div>
+        <div class="disp-week-grid">${rows}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-full" onclick="document.getElementById('modalDispCompleta')?.remove()">Chiudi</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ===================================
+// ANTEPRIMA SETTIMANA — riepilogo turni di tutti i camerieri
+// ===================================
+async function openAnteprima() {
+  const settimana = AppState.settimana;
+  if (!settimana) { showToast('Nessuna sessione attiva.', 'info'); return; }
+
+  const [profiles, turni] = await Promise.all([
+    DB.getAllProfiles(),
+    DB.getTurni(settimana.settimana)
+  ]);
+
+  const turniPerUser = {};
+  turni.forEach(t => {
+    if (!turniPerUser[t.user_id]) turniPerUser[t.user_id] = [];
+    turniPerUser[t.user_id].push(t);
+  });
+
+  const conTurni    = profiles.filter(p =>  turniPerUser[p.id]?.length > 0)
+    .sort((a, b) => (turniPerUser[b.id]?.length || 0) - (turniPerUser[a.id]?.length || 0));
+  const senzaTurni  = profiles.filter(p => !turniPerUser[p.id]?.length);
+
+  const giornoLabel = g => DateUtils.GIORNI[g] || g;
+  const turnoLabel  = t => t === 'mattina' ? '☀️ Mattina' : '🌙 Sera';
+
+  const renderDettaglio = userId => {
+    return (turniPerUser[userId] || [])
+      .sort((a, b) => a.giorno - b.giorno || a.turno.localeCompare(b.turno))
+      .map(t => `<div class="anteprima-turno">${giornoLabel(t.giorno)} — ${turnoLabel(t.turno)}</div>`)
+      .join('');
+  };
+
+  const personCards = conTurni.map(p => {
+    const count = turniPerUser[p.id]?.length || 0;
+    return `
+      <div class="anteprima-person">
+        <div class="anteprima-header" onclick="toggleAnteprimaDettaglio('ant_${p.id}', this)">
+          <span class="anteprima-name">${p.nome} ${p.cognome}</span>
+          <span class="anteprima-count">${count} turno${count !== 1 ? 'i' : ''}</span>
+          <span class="anteprima-toggle">▼ Dettagli</span>
+        </div>
+        <div class="anteprima-dettaglio" id="ant_${p.id}" style="display:none">
+          ${renderDettaglio(p.id)}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const senzaHtml = senzaTurni.length ? `
+    <div class="anteprima-senza">
+      <p style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">Senza turni assegnati:</p>
+      ${senzaTurni.map(p => `<p style="font-size:13px;color:var(--text-muted)">• ${p.nome} ${p.cognome}</p>`).join('')}
+    </div>
+  ` : '';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalAnteprima';
+  overlay.innerHTML = `
+    <div class="modal-sheet modal-sheet-tall">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>📊 Anteprima Settimana</h3>
+        <p>${DateUtils.rangeSettimana(settimana.settimana, settimana.data_fine)} — riepilogo turni assegnati</p>
+      </div>
+      <div class="modal-body">
+        ${personCards || '<p style="color:var(--text-muted)">Nessun turno ancora assegnato.</p>'}
+        ${senzaHtml}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-full" onclick="document.getElementById('modalAnteprima')?.remove()">Chiudi</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function toggleAnteprimaDettaglio(id, headerEl) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  const toggle = headerEl?.querySelector('.anteprima-toggle');
+  if (toggle) toggle.textContent = isOpen ? '▼ Dettagli' : '▲ Nascondi';
 }
