@@ -302,14 +302,23 @@ function buildTuttiTurniContent(turni, settimanaKey) {
     const data = DateUtils.getDataGiorno(settimanaKey, g)
                    .toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
+    // Chi lavora sia mattina che sera nello stesso giorno va evidenziato in rosso
+    // (confronto per nome, così vale anche se le due righe hanno account diversi)
+    const mattinaKeys = new Set((turni.mattina || []).map(personKey));
+    const seraKeys     = new Set((turni.sera    || []).map(personKey));
+    const doppiKeys    = new Set([...mattinaKeys].filter(k => seraKeys.has(k)));
+
     const renderTurnoSlot = (turnoKey, emoji, chipCls) => {
       const members = turni[turnoKey] || [];
       if (!members.length) return '';
-      const nomi = members.map(m => `${m.nome} ${m.cognome}`).join(', ');
+      const nomiHtml = members.map(m => {
+        const cls = doppiKeys.has(personKey(m)) ? 'tutti-slot-nome nome-doppio' : 'tutti-slot-nome';
+        return `<span class="${cls}">${m.nome} ${m.cognome}</span>`;
+      }).join('<span class="tutti-slot-sep">, </span>');
       return `
         <div class="tutti-slot">
           <span class="turno-chip ${chipCls}" style="font-size:11px">${emoji} ${turnoKey === 'mattina' ? 'Mattina' : 'Sera'}</span>
-          <span class="tutti-slot-nomi">${nomi}</span>
+          <span class="tutti-slot-nomi">${nomiHtml}</span>
         </div>`;
     };
 
@@ -422,6 +431,12 @@ function renderTuttiTurniSection(turni, settimana) {
   `;
 }
 
+// Chiave univoca per confrontare la stessa persona in due liste diverse (nome+cognome)
+function personKey(m) {
+  m = m || {};
+  return `${m.nome || ''}|${m.cognome || ''}`.trim().toLowerCase();
+}
+
 // Raggruppa turni per giorno+turno, ordinati
 function gruppiTurniPerGiornoTurno(turni, settimana) {
   const map = {};
@@ -430,6 +445,7 @@ function gruppiTurniPerGiornoTurno(turni, settimana) {
     if (!map[key]) map[key] = { giorno: t.giorno, turno: t.turno, members: [] };
     const profile = t.profiles || {};
     map[key].members.push({
+      userId:  t.user_id,
       nome:    profile.nome    || t.user_id?.slice(0,8) || '?',
       cognome: profile.cognome || '',
       ruolo:   t.ruolo_servizio || profile.ruolo || ''

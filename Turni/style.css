@@ -1364,9 +1364,9 @@ input::placeholder { color: var(--text-muted); }
    TUTTI I TURNI — vista compatta per giorno
    ======================================== */
 .tutti-giorno-card {
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-light);
-  margin-bottom: 10px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  margin-bottom: 14px;
   overflow: hidden;
 }
 
@@ -1376,7 +1376,7 @@ input::placeholder { color: var(--text-muted); }
   justify-content: space-between;
   padding: 10px 14px;
   background: var(--card-subtle);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 2px solid var(--border);
 }
 
 .tutti-giorno-label {
@@ -1406,6 +1406,15 @@ input::placeholder { color: var(--text-muted); }
   color: var(--text);
   font-weight: 500;
   flex: 1;
+}
+
+.tutti-slot-nome { color: inherit; }
+
+.tutti-slot-sep { color: var(--text-muted); }
+
+.nome-doppio {
+  color: var(--error);
+  font-weight: 700;
 }
 
 /* ========================================
@@ -1832,37 +1841,62 @@ input::placeholder { color: var(--text-muted); }
 }
 
 /* ========================================
-   ANTEPRIMA SETTIMANA — riepilogo per cameriere
+   ANTEPRIMA SETTIMANA — vista completa giorno/turno per giorno/turno
    ======================================== */
-.anteprima-person {
+.anteprima-day-group {
   background: var(--card);
-  border: 1px solid var(--border-light);
+  border: 2px solid var(--border);
   border-radius: var(--radius);
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
 
-.anteprima-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+.anteprima-day-header {
+  padding: 10px 16px;
+  background: var(--card-subtle);
+  border-bottom: 2px solid var(--border);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.anteprima-slot {
+  border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   transition: background 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 
-.anteprima-header:active { background: var(--card-subtle); }
+.anteprima-day-group .anteprima-slot:last-child { border-bottom: none; }
 
-.anteprima-name {
-  flex: 1;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
+.anteprima-slot:active { background: var(--card-subtle); }
+
+.anteprima-slot-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 4px;
 }
 
-.anteprima-count {
+.anteprima-slot-data {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.anteprima-slot-turno {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.anteprima-slot-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 700;
   padding: 3px 10px;
@@ -1872,33 +1906,34 @@ input::placeholder { color: var(--text-muted); }
   white-space: nowrap;
 }
 
-.anteprima-toggle {
+.anteprima-slot-nomi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px 12px;
+}
+
+.anteprima-chip {
   font-size: 12px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.anteprima-dettaglio {
-  padding: 0 16px 12px;
-  border-top: 1px solid var(--border-light);
-}
-
-.anteprima-turno {
-  padding: 8px 0;
-  font-size: 14px;
-  color: var(--text-light);
-  border-bottom: 1px solid var(--border-light);
   font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--card-subtle);
+  color: var(--text);
+  border: 1px solid var(--border-light);
 }
 
-.anteprima-turno:last-child { border-bottom: none; }
+.anteprima-chip.nome-doppio {
+  background: var(--error-bg);
+  color: var(--error);
+  border-color: var(--error-border);
+  font-weight: 700;
+}
 
-.anteprima-senza {
-  margin-top: 16px;
-  padding: 12px 14px;
-  background: var(--card-subtle);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-light);
+.anteprima-vuoto {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* --- iOS safe area --- */
