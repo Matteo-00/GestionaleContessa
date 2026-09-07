@@ -227,6 +227,7 @@ async function cambiaStato(nuovoStato) {
     // Quando si pubblica, elimina automaticamente le settimane più vecchie (mantieni solo ultime 5)
     if (nuovoStato === 'pubblicata') {
       await DB.eliminaSettimaneVecchie();
+      compilaFileOneDriveAllaPubblicazione(updated);
     }
 
     showToast('Stato aggiornato!', 'success');
