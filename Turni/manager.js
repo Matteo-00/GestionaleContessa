@@ -1434,7 +1434,7 @@ function apriDettaglioTurniPersona(userId, nomeCompleto) {
       <div class="modal-handle"></div>
       <div class="modal-header">
         <h3>🗓️ ${nomeCompleto}</h3>
-        <p>${mieiTurni.length} turno${mieiTurni.length !== 1 ? 'i' : ''} assegnato${mieiTurni.length !== 1 ? 'i' : ''} questa settimana</p>
+        <p>${mieiTurni.length} turni assegnati questa settimana</p>
       </div>
       <div class="modal-body">
         ${righe || '<p style="color:var(--text-muted)">Nessun turno assegnato.</p>'}
