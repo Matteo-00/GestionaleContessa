@@ -6,7 +6,9 @@
 const AppState = {
   user: null,       // Supabase User
   profile: null,    // Record da tabella profiles
-  settimana: null,  // Settimana corrente
+  settimana: null,  // Settimana mostrata di default
+  settimanaAltra: null,     // L'altra settimana attiva, se corrente e successiva si sovrappongono
+  settimanaAltraTipo: null, // 'corrente' | 'successiva' — cosa rappresenta settimanaAltra
 };
 
 // ===================================
@@ -62,16 +64,98 @@ async function onUserLogin(user) {
 
 // Carica settimana corrente.
 // I manager creano le sessioni manualmente — nessuna auto-creazione.
+//
+// Se esistono due settimane "vicine" (quella in corso e quella appena creata
+// per raccogliere le nuove disponibilità), restano visibili entrambe finché
+// quella vecchia non è scaduta da un giorno intero (si "elimina" il giorno
+// dopo l'ultimo turno, es. lunedì se la settimana finiva la domenica).
+// AppState.settimana       -> settimana mostrata di default
+// AppState.settimanaAltra  -> l'altra settimana attiva (o null se non ce n'è)
+// AppState.settimanaAltraTipo -> 'corrente' | 'successiva' (cosa rappresenta settimanaAltra)
 async function loadSettimanaCorrente(ruolo) {
-  const settimana = await DB.getSettimanaCorrente();
-  // Per tutti i ruoli: la sessione può essere null (manager la crea quando vuole)
-  AppState.settimana = settimana || null;
+  const settimane = await DB.getUltimeSettimane(2);
+
+  if (!settimane.length) {
+    AppState.settimana = null;
+    AppState.settimanaAltra = null;
+    AppState.settimanaAltraTipo = null;
+    return;
+  }
+
+  const [piuRecente, precedente] = settimane;
+
+  if (!precedente) {
+    AppState.settimana = piuRecente;
+    AppState.settimanaAltra = null;
+    AppState.settimanaAltraTipo = null;
+    return;
+  }
+
+  const fineVecchia = precedente.data_fine || precedente.settimana;
+  const limiteVisibilita = DateUtils.addGiorni(fineVecchia, 1); // giorno in cui la vecchia sparisce
+  const oggi = DateUtils.oggi();
+
+  if (oggi >= limiteVisibilita) {
+    // La settimana precedente è scaduta: resta solo quella nuova
+    AppState.settimana = piuRecente;
+    AppState.settimanaAltra = null;
+    AppState.settimanaAltraTipo = null;
+    return;
+  }
+
+  // Le due settimane si sovrappongono: entrambe restano visibili.
+  // Di default si mostra ancora la corrente, ma dalle 9:00 dell'ultimo
+  // giorno (o oltre) si passa automaticamente alla successiva, dove si
+  // stanno raccogliendo le disponibilità.
+  const oraAttuale = new Date();
+  const dopoLeNove = oggi > fineVecchia || (oggi === fineVecchia && oraAttuale.getHours() >= 9);
+
+  if (dopoLeNove) {
+    AppState.settimana = piuRecente;
+    AppState.settimanaAltra = precedente;
+    AppState.settimanaAltraTipo = 'corrente';
+  } else {
+    AppState.settimana = precedente;
+    AppState.settimanaAltra = piuRecente;
+    AppState.settimanaAltraTipo = 'successiva';
+  }
+}
+
+// Scambia la settimana visualizzata con l'altra settimana attiva (se presente)
+function swapSettimanaVista() {
+  if (!AppState.settimanaAltra) return;
+  const tmp = AppState.settimana;
+  AppState.settimana = AppState.settimanaAltra;
+  AppState.settimanaAltra = tmp;
+  AppState.settimanaAltraTipo = AppState.settimanaAltraTipo === 'successiva' ? 'corrente' : 'successiva';
+  showDashboard();
+}
+
+// Barra da mostrare quando ci sono due settimane attive contemporaneamente:
+// indica di quale settimana è composta la vista corrente e permette di passare all'altra.
+function renderMultiSettimanaBar() {
+  if (!AppState.settimanaAltra) return '';
+  const altra = AppState.settimanaAltra;
+  const tipoAltra = AppState.settimanaAltraTipo;
+  const tipoVista = tipoAltra === 'successiva' ? 'corrente' : 'successiva';
+  const labelVista = tipoVista === 'corrente' ? '🔴 Corrente' : 'Sessione successiva';
+  const labelAltra = tipoAltra === 'corrente' ? '🔴 Corrente' : 'Sessione successiva';
+  const range = DateUtils.rangeSettimana(altra.settimana, altra.data_fine);
+  return `
+    <div class="multi-settimana-bar">
+      <span class="multi-settimana-tag tag-${tipoVista}">${labelVista}</span>
+      <span class="multi-settimana-range">Stai visualizzando questa settimana. L'altra: <strong>${labelAltra}</strong> ${range}</span>
+      <button class="btn btn-secondary btn-sm" onclick="swapSettimanaVista()">🔁 Vedi l'altra</button>
+    </div>
+  `;
 }
 
 function onUserLogout() {
   AppState.user = null;
   AppState.profile = null;
   AppState.settimana = null;
+  AppState.settimanaAltra = null;
+  AppState.settimanaAltraTipo = null;
   showLoginView();
 }
 

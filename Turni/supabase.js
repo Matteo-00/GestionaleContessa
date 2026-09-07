@@ -156,6 +156,18 @@ const DB = {
     return data || [];
   },
 
+  // Restituisce le ultime N settimane (per data inizio decrescente), utile per
+  // tenere visibile la settimana corrente insieme a quella successiva appena creata.
+  async getUltimeSettimane(n = 2) {
+    const { data, error } = await sb
+      .from('settimane')
+      .select('*')
+      .order('settimana', { ascending: false })
+      .limit(n);
+    if (error) dbError(error, 'Errore ultime settimane');
+    return data || [];
+  },
+
   // Elimina completamente e definitivamente una sessione di lavoro:
   // turni assegnati, disponibilità inviate e richieste di scambio collegate.
   async eliminaSessione(settimana) {
@@ -241,6 +253,18 @@ const DB = {
       .neq('user_id', excludeUserId);
     if (error) dbError(error, 'Errore disponibili per turno');
     return (data || []).map(d => d.user_id);
+  },
+
+  // Restituisce i user_id già assegnati (in turno) per un giorno+turno specifico
+  async getAssegnatiPerTurno(settimana, giorno, turno) {
+    const { data, error } = await sb
+      .from('turni')
+      .select('user_id')
+      .eq('settimana', settimana)
+      .eq('giorno', parseInt(giorno))
+      .eq('turno', turno);
+    if (error) dbError(error, 'Errore assegnati per turno');
+    return (data || []).map(t => t.user_id);
   },
 
   // Tutti i turni di un utente (storico completo)
@@ -490,6 +514,13 @@ const DateUtils = {
   // Data di oggi in formato YYYY-MM-DD (locale)
   oggi() {
     return this._toLocalDateStr(new Date());
+  },
+
+  // Aggiunge n giorni a una data YYYY-MM-DD e restituisce la nuova data nello stesso formato
+  addGiorni(dataStr, n) {
+    const d = new Date(dataStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return this._toLocalDateStr(d);
   },
 
   // Formatta data in italiano

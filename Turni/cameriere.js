@@ -73,6 +73,7 @@ async function renderCameriereAperta() {
         </div>
         <span class="stato-badge stato-aperta">Aperta</span>
       </div>
+      ${renderMultiSettimanaBar()}
 
       <div class="disponibilita-section">
         <h2>La mia disponibilità</h2>
@@ -136,6 +137,7 @@ function renderCameriereElaborazione() {
       </div>
       <span class="stato-badge stato-in_elaborazione">In elaborazione</span>
     </div>
+    ${renderMultiSettimanaBar()}
     <div class="status-screen">
       <div class="status-icon">⏳</div>
       <h2>Turni in elaborazione</h2>
@@ -171,6 +173,8 @@ async function renderCamerierePublicata() {
         </div>
         <span class="stato-badge stato-pubblicata">Pubblicata</span>
       </div>
+
+      ${renderMultiSettimanaBar()}
 
       <!-- Notifiche scambio in arrivo -->
       ${notifiche}

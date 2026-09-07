@@ -520,6 +520,39 @@ input::placeholder { color: var(--text-muted); }
 .stato-pubblicata { background: var(--info-bg); color: var(--info); border: 1px solid #C0D4F8; }
 
 /* ========================================
+   SWITCHER DUE SETTIMANE ATTIVE (corrente + successiva)
+   ======================================== */
+.multi-settimana-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+  background: var(--card);
+}
+
+.multi-settimana-tag {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.multi-settimana-tag.tag-corrente { background: #FDE8E8; color: #C0392B; border: 1px solid #F5B7B1; }
+.multi-settimana-tag.tag-successiva { background: var(--info-bg); color: var(--info); border: 1px solid #C0D4F8; }
+
+.multi-settimana-range {
+  font-size: 13px;
+  color: var(--text-light);
+  flex: 1;
+}
+
+/* ========================================
    DISPONIBILITÀ GRID (Cameriere)
    ======================================== */
 .disponibilita-section { margin-bottom: 24px; }
@@ -1934,6 +1967,41 @@ input::placeholder { color: var(--text-muted); }
   font-size: 13px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* --- Badge conteggio turni/disponibilità + icona info dentro ai chip nome --- */
+.anteprima-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chip-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--sabbia-pale);
+  color: var(--text-light);
+}
+
+.chip-info-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  color: var(--info, #2E5AAC);
+}
+
+.disp-week-day.day-libero {
+  color: var(--error, #C0392B);
+  font-weight: 800;
 }
 
 /* --- iOS safe area --- */
