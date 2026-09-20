@@ -73,19 +73,25 @@ async function apriModaleScambio(giorno, turno, settimanaKey) {
 
   try {
     // Query server-side: Supabase filtra direttamente nel DB con i tipi corretti
-    const [disponibiliIds, profiles, mieiTurni] = await Promise.all([
+    const [disponibiliIds, assegnatiIds, profiles, mieiTurni] = await Promise.all([
       DB.getDisponibiliPerTurno(settimanaKey, giornoInt, turno, userId),
+      DB.getAssegnatiPerTurno(settimanaKey, giornoInt, turno),
       DB.getAllProfiles(),
       DB.getTurniUtente(userId, settimanaKey)
     ]);
 
     console.log('[Scambio] user_id disponibili per turno:', disponibiliIds);
 
+    // Solo chi ha dato disponibilità ma NON è già stato inserito in questo turno
+    // (chi è già assegnato non ha bisogno di uno scambio per lavorarci)
+    const assegnatiSet = new Set(assegnatiIds);
+    const liberiIds = disponibiliIds.filter(id => !assegnatiSet.has(id));
+
     // Costruisce lista persone dai profili corrispondenti agli ID trovati
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.id] = p; });
 
-    const persone = disponibiliIds
+    const persone = liberiIds
       .map(id => profileMap[id] || { id, nome: id.slice(0, 8), cognome: '(no profilo)', ruolo: '' })
       .filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
   // I miei altri turni (per proposta 1x1)
@@ -97,7 +103,7 @@ async function apriModaleScambio(giorno, turno, settimanaKey) {
 
   const opzioniPersone = persone.length
     ? persone.map(p => `<option value="${p.id}">${p.nome} ${p.cognome}</option>`).join('')
-    : `<option value="" disabled>Nessuno ha dato disponibilità per questo turno</option>`;
+    : `<option value="" disabled>Nessuno disponibile e libero per questo turno</option>`;
 
   const opzioniMieiTurni = mieiAltriTurni.length
     ? mieiAltriTurni.map(t => {

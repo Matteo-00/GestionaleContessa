@@ -124,6 +124,7 @@ async function renderManagerDashboard(tabBar) {
       </div>
       <span class="stato-badge stato-${settimana.stato}">${statoLabel(settimana.stato)}</span>
     </div>
+    ${renderMultiSettimanaBar()}
     <div class="manager-grid">${cards}</div>
     <div style="margin:0 0 8px">
       <button class="btn btn-secondary btn-full" onclick="openAnteprima()">📊 Anteprima Settimana</button>
@@ -226,6 +227,7 @@ async function cambiaStato(nuovoStato) {
     // Quando si pubblica, elimina automaticamente le settimane più vecchie (mantieni solo ultime 5)
     if (nuovoStato === 'pubblicata') {
       await DB.eliminaSettimaneVecchie();
+      compilaFileOneDriveAllaPubblicazione(updated);
     }
 
     showToast('Stato aggiornato!', 'success');
@@ -253,7 +255,14 @@ async function eliminaSessioneCorrente() {
 
   try {
     await DB.eliminaSessione(settimana.settimana);
-    AppState.settimana = null;
+    // Se restava l'altra settimana attiva, prende il posto di quella eliminata
+    if (AppState.settimanaAltra) {
+      AppState.settimana = AppState.settimanaAltra;
+      AppState.settimanaAltra = null;
+      AppState.settimanaAltraTipo = null;
+    } else {
+      AppState.settimana = null;
+    }
     showToast('Sessione di lavoro eliminata.', 'success');
     renderManager();
   } catch (err) {
@@ -367,8 +376,28 @@ async function confermaCreaSessione() {
   }
 
   try {
+    const precedente = AppState.settimana; // settimana che stavamo visualizzando prima di crearne una nuova
     const nuova = await DB.createSettimana(inizio, fine);
     AppState.settimana = nuova;
+
+    // Se la settimana precedente non è ancora scaduta (resta visibile fino al
+    // giorno dopo la sua fine), continua a mostrarla come "corrente" insieme
+    // alla nuova sessione appena creata.
+    if (precedente) {
+      const fineVecchia = precedente.data_fine || precedente.settimana;
+      const limite = DateUtils.addGiorni(fineVecchia, 1);
+      if (DateUtils.oggi() < limite) {
+        AppState.settimanaAltra = precedente;
+        AppState.settimanaAltraTipo = 'corrente';
+      } else {
+        AppState.settimanaAltra = null;
+        AppState.settimanaAltraTipo = null;
+      }
+    } else {
+      AppState.settimanaAltra = null;
+      AppState.settimanaAltraTipo = null;
+    }
+
     chiudiModali();
     showToast('Sessione creata!', 'success');
     renderManager();
@@ -736,6 +765,7 @@ async function renderManagerMieiTurni(tabBar) {
       </div>
       <span class="stato-badge stato-${settimana.stato}">${statoLabel(settimana.stato)}</span>
     </div>
+    ${renderMultiSettimanaBar()}
     ${avvisoHtml}
 
     <div class="collapsible-section">
@@ -820,6 +850,7 @@ async function renderManagerDisponibilita(tabBar) {
       </div>
       <span class="stato-badge stato-${settimana.stato}">${statoLabel(settimana.stato)}</span>
     </div>
+    ${renderMultiSettimanaBar()}
     <div class="recap-section">
       <h2>Disponibilità ricevute</h2>
       <div class="recap-progress">
@@ -881,6 +912,7 @@ async function renderManagerMiaDisponibilita(tabBar) {
       </div>
       <span class="stato-badge stato-${settimana.stato}">${statoLabel(settimana.stato)}</span>
     </div>
+    ${renderMultiSettimanaBar()}
     ${readonly ? `<div class="alert-banner alert-warning">⚠️ Disponibilità bloccate — ${statoLabel(settimana.stato)}</div>` : ''}
     <div class="disponibilita-grid">
       <div class="disp-header"><span>Giorno</span><span>Mattina</span><span>Sera</span></div>
@@ -1256,59 +1288,97 @@ function openDisponibilitaCompletaModal(userId, nomeCompleto, ctx) {
 }
 
 // ===================================
-// ANTEPRIMA SETTIMANA — riepilogo turni di tutti i camerieri
+// ANTEPRIMA SETTIMANA — vista completa giorno per giorno / turno per turno
+// (lunedì mattina, lunedì sera, martedì mattina, ...) con possibilità di
+// modificare direttamente ogni turno prima dell'invio al Super Admin.
 // ===================================
 async function openAnteprima() {
   const settimana = AppState.settimana;
   if (!settimana) { showToast('Nessuna sessione attiva.', 'info'); return; }
 
-  const [profiles, turni] = await Promise.all([
-    DB.getAllProfiles(),
-    DB.getTurni(settimana.settimana)
+  const [turni, configs, disponibilita] = await Promise.all([
+    DB.getTurni(settimana.settimana),
+    DB.getAllTurniConfig(settimana.settimana),
+    DB.getDisponibilita(settimana.settimana)
   ]);
 
+  const giorniAttivi = DateUtils.getGiorniSessione(settimana.settimana, settimana.data_fine || settimana.settimana);
+
+  // Cache usata dai dialog di dettaglio persona (turni assegnati / disponibilità date)
+  _anteprimaData = { settimanaKey: settimana.settimana, giorniAttivi, turni, disponibilita };
+
+  // Conteggi per persona: quanti turni assegnati e quante disponibilità date questa settimana
   const turniPerUser = {};
+  turni.forEach(t => { turniPerUser[t.user_id] = (turniPerUser[t.user_id] || 0) + 1; });
+  const dispPerUser = {};
+  disponibilita.forEach(d => { if (d.disponibile) dispPerUser[d.user_id] = (dispPerUser[d.user_id] || 0) + 1; });
+
+  const turniMap = {};
   turni.forEach(t => {
-    if (!turniPerUser[t.user_id]) turniPerUser[t.user_id] = [];
-    turniPerUser[t.user_id].push(t);
+    const k = `${t.giorno}-${t.turno}`;
+    if (!turniMap[k]) turniMap[k] = [];
+    turniMap[k].push(t);
   });
 
-  const conTurni    = profiles.filter(p =>  turniPerUser[p.id]?.length > 0)
-    .sort((a, b) => (turniPerUser[b.id]?.length || 0) - (turniPerUser[a.id]?.length || 0));
-  const senzaTurni  = profiles.filter(p => !turniPerUser[p.id]?.length);
+  const configMap = {};
+  configs.forEach(c => { configMap[`${c.giorno}-${c.turno}`] = c.camerieri_richiesti; });
 
-  const giornoLabel = g => DateUtils.GIORNI[g] || g;
-  const turnoLabel  = t => t === 'mattina' ? '☀️ Mattina' : '🌙 Sera';
+  // Modificabile solo se non è "in_revisione" (a meno che non sia il super admin)
+  const editabile = !(settimana.stato === 'in_revisione' && AppState.profile?.ruolo !== 'super_admin');
 
-  const renderDettaglio = userId => {
-    return (turniPerUser[userId] || [])
-      .sort((a, b) => a.giorno - b.giorno || a.turno.localeCompare(b.turno))
-      .map(t => `<div class="anteprima-turno">${giornoLabel(t.giorno)} — ${turnoLabel(t.turno)}</div>`)
-      .join('');
-  };
+  const dayGroups = giorniAttivi.map(g => {
+    const dataStr    = DateUtils.getDataGiorno(settimana.settimana, g)
+                          .toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    // Confronto per nome (non per account) così evidenzia il doppio turno anche tra profili diversi
+    const mattinaKeys = new Set((turniMap[`${g}-mattina`] || []).map(t => personKey(t.profiles)));
+    const seraKeys     = new Set((turniMap[`${g}-sera`]    || []).map(t => personKey(t.profiles)));
+    const doppiKeys    = new Set([...mattinaKeys].filter(k => seraKeys.has(k)));
 
-  const personCards = conTurni.map(p => {
-    const count = turniPerUser[p.id]?.length || 0;
+    const renderSlot = turno => {
+      const k      = `${g}-${turno}`;
+      const membri = (turniMap[k] || []).slice()
+        .sort((a, b) => `${a.profiles?.nome}`.localeCompare(`${b.profiles?.nome}`));
+      const req    = configMap[k] || 0;
+      const emoji  = turno === 'mattina' ? '☀️' : '🌙';
+      const cls = req > 0
+        ? (membri.length >= req ? 'indicator-ok' : (membri.length > 0 ? 'indicator-warn' : 'indicator-empty'))
+        : (membri.length > 0 ? 'indicator-ok' : 'indicator-empty');
+      const nomiHtml = membri.length
+        ? membri.map(m => {
+            const doppioCls = doppiKeys.has(personKey(m.profiles)) ? 'anteprima-chip nome-doppio' : 'anteprima-chip';
+            const uid = m.user_id;
+            const nomeCompleto = `${m.profiles?.nome || '?'} ${m.profiles?.cognome || ''}`.trim();
+            const nomeEsc = nomeCompleto.replace(/'/g, "\\'");
+            const turniCount = turniPerUser[uid] || 0;
+            const dispCount  = dispPerUser[uid] || 0;
+            return `
+              <span class="${doppioCls}">
+                <span>${nomeCompleto}</span>
+                <span class="chip-count" title="Turni assegnati questa settimana">🗓️ ${turniCount}<button type="button" class="chip-info-btn" onclick="event.stopPropagation();apriDettaglioTurniPersona('${uid}','${nomeEsc}')">ⓘ</button></span>
+                <span class="chip-count" title="Disponibilità date questa settimana">✋ ${dispCount}<button type="button" class="chip-info-btn" onclick="event.stopPropagation();apriDettaglioDisponibilitaPersona('${uid}','${nomeEsc}')">ⓘ</button></span>
+              </span>`;
+          }).join('')
+        : `<span class="anteprima-vuoto">Nessuno assegnato</span>`;
+
+      return `
+        <div class="anteprima-slot" ${editabile ? `onclick="editAnteprimaSlot(${g},'${turno}')"` : ''}>
+          <div class="anteprima-slot-header">
+            <span class="anteprima-slot-turno">${emoji} ${turno === 'mattina' ? 'Mattina' : 'Sera'}</span>
+            <span class="anteprima-slot-count"><span class="card-indicator ${cls}"></span>${req > 0 ? `${membri.length} / ${req}` : membri.length}</span>
+          </div>
+          <div class="anteprima-slot-nomi">${nomiHtml}</div>
+        </div>
+      `;
+    };
+
     return `
-      <div class="anteprima-person">
-        <div class="anteprima-header" onclick="toggleAnteprimaDettaglio('ant_${p.id}', this)">
-          <span class="anteprima-name">${p.nome} ${p.cognome}</span>
-          <span class="anteprima-count">${count} turno${count !== 1 ? 'i' : ''}</span>
-          <span class="anteprima-toggle">▼ Dettagli</span>
-        </div>
-        <div class="anteprima-dettaglio" id="ant_${p.id}" style="display:none">
-          ${renderDettaglio(p.id)}
-        </div>
+      <div class="anteprima-day-group">
+        <div class="anteprima-day-header">${DateUtils.GIORNI[g]} <span class="anteprima-slot-data">${dataStr}</span></div>
+        ${renderSlot('mattina')}
+        ${renderSlot('sera')}
       </div>
     `;
   }).join('');
-
-  const senzaHtml = senzaTurni.length ? `
-    <div class="anteprima-senza">
-      <p style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px">Senza turni assegnati:</p>
-      ${senzaTurni.map(p => `<p style="font-size:13px;color:var(--text-muted)">• ${p.nome} ${p.cognome}</p>`).join('')}
-    </div>
-  ` : '';
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -1318,11 +1388,13 @@ async function openAnteprima() {
       <div class="modal-handle"></div>
       <div class="modal-header">
         <h3>📊 Anteprima Settimana</h3>
-        <p>${DateUtils.rangeSettimana(settimana.settimana, settimana.data_fine)} — riepilogo turni assegnati</p>
+        <p>${DateUtils.rangeSettimana(settimana.settimana, settimana.data_fine)} — tutti i turni, giorno per giorno</p>
       </div>
       <div class="modal-body">
-        ${personCards || '<p style="color:var(--text-muted)">Nessun turno ancora assegnato.</p>'}
-        ${senzaHtml}
+        ${dayGroups || '<p style="color:var(--text-muted)">Nessun turno ancora assegnato.</p>'}
+        <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:4px">🔴 In rosso chi fa sia mattina che sera lo stesso giorno</p>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:4px">🗓️ turni assegnati · ✋ disponibilità date — tocca ⓘ per i dettagli</p>
+        ${editabile ? '<p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:4px">Tocca un turno per modificarlo</p>' : ''}
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary btn-full" onclick="document.getElementById('modalAnteprima')?.remove()">Chiudi</button>
@@ -1333,11 +1405,101 @@ async function openAnteprima() {
   document.body.appendChild(overlay);
 }
 
-function toggleAnteprimaDettaglio(id, headerEl) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const isOpen = el.style.display !== 'none';
-  el.style.display = isOpen ? 'none' : 'block';
-  const toggle = headerEl?.querySelector('.anteprima-toggle');
-  if (toggle) toggle.textContent = isOpen ? '▼ Dettagli' : '▲ Nascondi';
+// Chiude l'anteprima e apre il modal di modifica per il turno scelto
+function editAnteprimaSlot(giorno, turno) {
+  document.getElementById('modalAnteprima')?.remove();
+  openTurnoModal(giorno, turno);
+}
+
+// Cache dati settimana per i dialog di dettaglio persona aperti dall'anteprima
+let _anteprimaData = null;
+
+// Dialog: elenco giorni/turni in cui la persona è stata inserita in turno
+function apriDettaglioTurniPersona(userId, nomeCompleto) {
+  if (!_anteprimaData) return;
+  const { giorniAttivi, turni, settimanaKey } = _anteprimaData;
+  const mieiTurni = turni.filter(t => t.user_id === userId);
+
+  const righe = giorniAttivi.map(g => {
+    const haMattina = mieiTurni.some(t => t.giorno === g && t.turno === 'mattina');
+    const haSera    = mieiTurni.some(t => t.giorno === g && t.turno === 'sera');
+    if (!haMattina && !haSera) return '';
+    const data  = DateUtils.getDataGiorno(settimanaKey, g).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    const parti = [];
+    if (haMattina) parti.push('☀️ Mattina');
+    if (haSera)    parti.push('🌙 Sera');
+    return `
+      <div class="recap-item">
+        <div class="recap-icon icon-ok">✓</div>
+        <span class="recap-name">${DateUtils.GIORNI[g]} ${data} — ${parti.join(', ')}</span>
+      </div>`;
+  }).filter(Boolean).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalDettaglioTurniPersona';
+  overlay.style.zIndex = '300';
+  overlay.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>🗓️ ${nomeCompleto}</h3>
+        <p>${mieiTurni.length} turni assegnati questa settimana</p>
+      </div>
+      <div class="modal-body">
+        ${righe || '<p style="color:var(--text-muted)">Nessun turno assegnato.</p>'}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-full" onclick="document.getElementById('modalDettaglioTurniPersona')?.remove()">Chiudi</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// Dialog: dettaglio disponibilità date, con le giornate senza alcuna disponibilità evidenziate in rosso
+function apriDettaglioDisponibilitaPersona(userId, nomeCompleto) {
+  if (!_anteprimaData) return;
+  const { giorniAttivi, disponibilita, settimanaKey } = _anteprimaData;
+  const mieDisp = new Set(
+    disponibilita.filter(d => d.user_id === userId && d.disponibile).map(d => `${d.giorno}-${d.turno}`)
+  );
+
+  const righe = giorniAttivi.map(g => {
+    const mattina = mieDisp.has(`${g}-mattina`);
+    const sera    = mieDisp.has(`${g}-sera`);
+    const libero  = !mattina && !sera;
+    const data    = DateUtils.getDataGiorno(settimanaKey, g).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    const parti = [];
+    if (mattina) parti.push('☀️ Mattina');
+    if (sera)    parti.push('🌙 Sera');
+    return `
+      <div class="disp-week-row">
+        <span class="disp-week-day ${libero ? 'day-libero' : ''}">${DateUtils.GIORNI[g]} ${data}</span>
+        <span style="font-size:13px;padding-top:10px;${libero ? 'color:var(--error);font-weight:700' : ''}">
+          ${libero ? '❌ Nessuna disponibilità' : parti.join(', ')}
+        </span>
+      </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modalDettaglioDispPersona';
+  overlay.style.zIndex = '300';
+  overlay.innerHTML = `
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>✋ ${nomeCompleto}</h3>
+        <p>${mieDisp.size} disponibilità date questa settimana</p>
+      </div>
+      <div class="modal-body">${righe}</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-full" onclick="document.getElementById('modalDettaglioDispPersona')?.remove()">Chiudi</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
