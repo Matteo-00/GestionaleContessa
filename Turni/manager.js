@@ -393,7 +393,7 @@ function equityBadge(count) {
 // Re-render solo la lista nel modal (senza riaprirlo)
 function _renderListaTurnoModal() {
   if (!_turnoModalData) return;
-  const { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita, weeklyDispCounts } = _turnoModalData;
+  const { tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita, weeklyDispCounts, assegnatiPranzoIds } = _turnoModalData;
 
   const sorted = isWeekendEquita
     ? [...tutti].sort((a, b) => {
@@ -415,12 +415,16 @@ function _renderListaTurnoModal() {
         const sessBadge    = count > 0
           ? `<span class="sess-count-badge" title="Turni già assegnati in questa sessione">📌 ${count}×</span>`
           : '';
+        const giaPranzo     = assegnatiPranzoIds ? assegnatiPranzoIds.has(p.id) : false;
+        const pranzoBadge   = giaPranzo
+          ? `<span class="pranzo-badge" title="Già assegnato a pranzo lo stesso giorno">(Pranzo)</span>`
+          : '';
         return `
         <div class="disponibile-item-wrap">
           <div class="disponibile-item" onclick="toggleAssegna('${p.id}')">
             <input type="checkbox" class="checkbox-assegna" id="ass_${p.id}" ${giaAssegnato ? 'checked' : ''}>
             <div class="disponibile-item-info">
-              <label for="ass_${p.id}">${p.nome} ${p.cognome}</label>
+              <label for="ass_${p.id}">${p.nome} ${p.cognome} ${pranzoBadge}</label>
               <div class="disponibile-badges">
                 ${isWeekendEquita ? equityBadge(equitaCounts[p.id] || 0) : ''}
                 ${sessBadge}
@@ -562,6 +566,11 @@ async function _openTurnoModalFull(giorno, turno, requiredCount) {
     weeklyDispCounts[d.user_id] = (weeklyDispCounts[d.user_id] || 0) + 1;
   });
 
+  // Chi è già stato assegnato a pranzo (mattina) lo stesso giorno: utile quando si assegna la sera
+  const assegnatiPranzoIds = turno === 'sera'
+    ? new Set(turniAssegnati.filter(t => t.giorno === giorno && t.turno === 'mattina').map(t => t.user_id))
+    : new Set();
+
   const profilesMap = {};
   profiles.forEach(p => { profilesMap[p.id] = p; });
 
@@ -569,7 +578,7 @@ async function _openTurnoModalFull(giorno, turno, requiredCount) {
 
   _turnoModalData = {
     tutti, equitaCounts, assegnatiIds, sessioneCounts, isWeekendEquita,
-    weeklyDispCounts, profilesMap, giorniAttivi,
+    weeklyDispCounts, profilesMap, giorniAttivi, assegnatiPranzoIds,
     dispSettimana: disponibilita, turniSettimana: turniAssegnati,
     currentGiorno: giorno, currentTurno: turno,
     settimanaKey: settimana.settimana, requiredCount

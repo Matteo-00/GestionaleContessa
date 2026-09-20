@@ -1626,6 +1626,15 @@ input::placeholder { color: var(--text-muted); }
   margin-top: 3px;
 }
 
+/* Badge "(Pranzo)" — persona già assegnata a pranzo lo stesso giorno */
+.pranzo-badge {
+  color: var(--error);
+  font-weight: 700;
+  font-size: 12px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
 /* Badge disponibilità settimanali */
 .avail-count-badge {
   display: inline-flex;
