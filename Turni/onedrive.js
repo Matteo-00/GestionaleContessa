@@ -1,145 +1,420 @@
 // ===================================
-// ONEDRIVE.JS - Compilazione automatica file Excel su OneDrive
-// alla pubblicazione dei turni (Microsoft Graph + MSAL.js)
+// ONEDRIVE.JS
+// Pubblicazione automatica turni su
+// Excel OneDrive tramite Supabase Edge Function
 // ===================================
 
-// --- CONFIGURAZIONE (da completare) ---------------------------------------
-// 1) CLIENT_ID: crealo su https://portal.azure.com -> Microsoft Entra ID ->
-//    "Registrazioni app" -> "Nuova registrazione".
-//      - Tipi di account supportati: "Account personali Microsoft" (o
-//        "Account in qualsiasi directory organizzativa e account Microsoft
-//        personali" se un domani volete usarlo anche con account aziendali).
-//      - Piattaforma: "Applicazione a pagina singola (SPA)".
-//      - URI di reindirizzamento: l'URL dove gira l'app, es.
-//        https://tuosito.it/Turni/index.html (deve combaciare esattamente).
-//      - In "Autorizzazioni API" aggiungi Microsoft Graph -> Delegate ->
-//        Files.ReadWrite (consenso utente, non serve admin consent).
-//    Copia il "ID applicazione (client)" e incollalo qui sotto.
-// 2) FILE_PATH: percorso del file .xlsx dentro OneDrive (root personale),
-//    es. "/Turni/PianoTurni.xlsx" (lo stesso che vedi nell'URL di OneDrive
-//    senza il dominio, a partire dalla cartella).
-// 3) SHEET_NAME: nome del foglio Excel da compilare (es. "Foglio1").
-// 4) CELL_MAP: dimmi quali celle compilare e te lo aggiorno subito.
-const OD_CONFIG = {
-  CLIENT_ID: 'INSERISCI_QUI_CLIENT_ID',
-  AUTHORITY: 'https://login.microsoftonline.com/consumers', // account personali
-  REDIRECT_URI: window.location.origin + window.location.pathname,
-  SCOPES: ['Files.ReadWrite'],
-  FILE_PATH: '/Turni/PianoTurni.xlsx',
-  SHEET_NAME: 'Foglio1'
-};
+const ONEDRIVE_FUNCTION_URL =
+  'https://zlyikcrrwjxmvoigqpdi.supabase.co/functions/v1/onedrive';
 
-let _msalInstance = null;
 
-function _getMsalInstance() {
-  if (_msalInstance) return _msalInstance;
-  _msalInstance = new msal.PublicClientApplication({
-    auth: {
-      clientId: OD_CONFIG.CLIENT_ID,
-      authority: OD_CONFIG.AUTHORITY,
-      redirectUri: OD_CONFIG.REDIRECT_URI
-    },
-    cache: { cacheLocation: 'localStorage' }
-  });
-  return _msalInstance;
-}
-
-// Ottiene un access token Graph, chiedendo il login solo se necessario
-async function _getGraphToken() {
-  const msalApp = _getMsalInstance();
-  await msalApp.initialize();
-
-  const accounts = msalApp.getAllAccounts();
-  const request = { scopes: OD_CONFIG.SCOPES };
-
-  if (accounts.length > 0) {
-    request.account = accounts[0];
-    try {
-      const result = await msalApp.acquireTokenSilent(request);
-      return result.accessToken;
-    } catch (e) {
-      // token scaduto/non disponibile: richiedi login interattivo
-    }
-  }
-
-  const result = await msalApp.loginPopup(request);
-  return result.accessToken;
-}
-
-// Scrive un blocco di valori in un range di celle (es. address: 'A2:B5')
-async function _scriviRangeExcel(token, address, values) {
-  const encodedPath = encodeURIComponent(OD_CONFIG.FILE_PATH);
-  const url = `https://graph.microsoft.com/v1.0/me/drive/root:${OD_CONFIG.FILE_PATH}:` +
-              `/workbook/worksheets('${encodeURIComponent(OD_CONFIG.SHEET_NAME)}')` +
-              `/range(address='${address}')`;
-
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ values })
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Errore scrittura Excel (${res.status}): ${err}`);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// PUNTO DI INGRESSO: chiamata quando la settimana viene pubblicata.
-// Al momento non sappiamo ANCORA quali celle compilare: appena mi mostri il
-// file mi limito a riempire CELL_MAP e la funzione sotto con gli indirizzi
-// giusti (es. giorno X -> cella B3, nome cameriere -> C3, ecc.).
-// ---------------------------------------------------------------------------
+/**
+ * Pubblica i turni della settimana sul file Excel
+ * "TURNI SETTIMANALI DEFINITIVI.xlsx" presente su OneDrive.
+ *
+ * Il browser NON accede direttamente a Microsoft Graph.
+ * I dati vengono inviati alla Edge Function Supabase,
+ * che si occupa di:
+ *
+ * 1. recuperare il token Microsoft
+ * 2. aggiornare direttamente il foglio SALA tramite Microsoft Graph
+ * 3. lasciare invariati gli altri fogli
+ */
 async function compilaFileOneDriveAllaPubblicazione(settimana) {
-  if (!OD_CONFIG.CLIENT_ID || OD_CONFIG.CLIENT_ID === 'INSERISCI_QUI_CLIENT_ID') {
-    console.warn('[OneDrive] CLIENT_ID non configurato: salto la compilazione del file.');
-    return;
-  }
 
   try {
-    const token = await _getGraphToken();
-    const turni = await DB.getTurni(settimana.settimana);
 
-    // TODO: sostituire con la scrittura reale non appena definita la mappatura celle.
-    // Esempio placeholder (da rimuovere): scrive il numero totale di turni in A1.
-    // await _scriviRangeExcel(token, 'A1', [[turni.length]]);
+    // -------------------------------------------------
+    // 1. Controllo settimana
+    // -------------------------------------------------
 
-    showToast('Turni pubblicati (file OneDrive: mappatura celle da configurare)', 'info');
+    if (!settimana || !settimana.settimana) {
+      throw new Error('Settimana non valida.');
+    }
+
+    console.log(
+      '[OneDrive] Pubblicazione settimana:',
+      settimana.settimana
+    );
+
+
+    // -------------------------------------------------
+    // 2. Recuperiamo i turni assegnati
+    // -------------------------------------------------
+
+    const turni =
+      await DB.getTurni(settimana.settimana);
+
+    console.log(
+      '[OneDrive] Turni recuperati:',
+      turni
+    );
+
+
+    // -------------------------------------------------
+    // 3. Recuperiamo i profili
+    //    per trasformare user_id -> nome/cognome
+    // -------------------------------------------------
+
+    const profiles =
+      await DB.getAllProfiles();
+
+    const profilesMap = {};
+
+    profiles.forEach(profile => {
+      profilesMap[profile.id] = profile;
+    });
+
+
+    // -------------------------------------------------
+    // 4. MAPPATURA NOMI PER EXCEL
+    // -------------------------------------------------
+    //
+    // IMPORTANTE:
+    //
+    // Questa mappatura viene utilizzata SOLO per
+    // preparare i dati da inviare a Excel.
+    //
+    // NON modifica:
+    // - database
+    // - profiles
+    // - turni
+    // - nomi utilizzati dal resto dell'applicazione
+    //
+    // Il valore a destra è ESATTAMENTE quello che
+    // vogliamo mandare al foglio Excel SALA.
+    //
+
+    const nomiExcel = {
+
+      // Utenti da NON mandare a Excel
+      'Matteo Sebastiani': null,
+      'GestionaleContessaUser': null,
+
+      // Camerieri / nomi Excel
+      'Giulia': 'GIULIA',
+      'Alice': 'ALICE',
+      'Giovi': 'GIOVI',
+
+      // Nel DB può essere Samantha,
+      // mentre in Excel è SAMANTA
+      'Samantha': 'SAMANTA',
+      'Samanta': 'SAMANTA',
+
+      'Jessica': 'JESSICA',
+      'Anita': 'ANITA',
+
+      'Ale': 'ALE',
+      'Ale B': 'ALE B',
+
+      'Giada': 'GIADA',
+      'Giorgia': 'GIORGIA',
+
+      'Anna': 'ANNA',
+
+      'Maddi': 'MADDI',
+
+      // Possibili valori del DB
+      'Annina': 'ANNINA',
+      'Annina .': 'ANNINA',
+
+      'Aurora': 'AURORA',
+      'Mari': 'MARI',
+      'Benni': 'BENNI',
+      'Dania': 'DANIA',
+
+      // Lisa G -> LISA in Excel
+      'Lisa G': 'LISA',
+
+      'Maurizio': 'MAURIZIO',
+
+      'Matteo': 'MATTEO',
+
+      // Presenti nella struttura Excel
+      'Maura': 'MAURA',
+      'Pietro': 'PIETRO'
+    };
+
+
+    // -------------------------------------------------
+    // 5. Prepariamo i dati da mandare alla Edge Function
+    // -------------------------------------------------
+    //
+    // Consideriamo SOLO:
+    //
+    // giorno 1 -> lunedì
+    // giorno 2 -> martedì
+    // ...
+    // giorno 7 -> domenica
+    //
+    // turno:
+    // mattina
+    // sera
+    //
+    // RIPOSO NON VIENE GESTITO.
+    //
+    // Il nome contenuto in "turniExcel" è già convertito
+    // nel formato corretto per Excel.
+    //
+
+    const turniExcel = turni
+      .filter(t => {
+
+        if (!t) {
+          return false;
+        }
+
+        const giorno =
+          Number(t.giorno);
+
+        return (
+          giorno >= 1 &&
+          giorno <= 7 &&
+          (
+            t.turno === 'mattina' ||
+            t.turno === 'sera'
+          )
+        );
+      })
+      .map(t => {
+
+        const profile =
+          profilesMap[t.user_id];
+
+        if (!profile) {
+
+          console.warn(
+            '[OneDrive] Profilo non trovato:',
+            t.user_id
+          );
+
+          return null;
+        }
+
+
+        // ---------------------------------------------
+        // Nome originale del DB
+        // ---------------------------------------------
+
+        const nome =
+          profile.nome || '';
+
+        const cognome =
+          profile.cognome || '';
+
+        const nomeCompleto =
+          `${nome} ${cognome}`.trim();
+
+
+        if (!nomeCompleto) {
+          return null;
+        }
+
+
+        // ---------------------------------------------
+        // CONVERSIONE SOLO PER EXCEL
+        // ---------------------------------------------
+        //
+        // Prima proviamo:
+        // "Nome Cognome"
+        //
+        // Se non esiste nella mappa, proviamo:
+        // "Nome"
+        //
+        // Esempi:
+        //
+        // Samantha -> SAMANTA
+        // Maurizio -> MAURIZIO
+        // Ale B -> ALE B
+        // Lisa G -> LISA
+        // Annina . -> ANNINA
+        //
+
+        let nomeExcel;
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            nomiExcel,
+            nomeCompleto
+          )
+        ) {
+
+          nomeExcel =
+            nomiExcel[nomeCompleto];
+
+        } else if (
+          Object.prototype.hasOwnProperty.call(
+            nomiExcel,
+            nome
+          )
+        ) {
+
+          nomeExcel =
+            nomiExcel[nome];
+
+        } else {
+
+          nomeExcel = undefined;
+        }
+
+
+        // ---------------------------------------------
+        // Utente escluso dalla pubblicazione Excel
+        // ---------------------------------------------
+
+        if (nomeExcel === null) {
+
+          console.log(
+            '[OneDrive] Utente escluso da Excel:',
+            nomeCompleto
+          );
+
+          return null;
+        }
+
+
+        // ---------------------------------------------
+        // Nome non presente nella mappatura
+        // ---------------------------------------------
+
+        if (!nomeExcel) {
+
+          console.warn(
+            '[OneDrive] Nome NON presente nella mappa Excel:',
+            nomeCompleto
+          );
+
+          return null;
+        }
+
+
+        // ---------------------------------------------
+        // Log conversione
+        // ---------------------------------------------
+
+        console.log(
+          '[OneDrive] Nome per Excel:',
+          nomeCompleto,
+          '->',
+          nomeExcel
+        );
+
+
+        // ---------------------------------------------
+        // Oggetto destinato ESCLUSIVAMENTE a Excel
+        // ---------------------------------------------
+
+        return {
+
+          giorno:
+            Number(t.giorno),
+
+          turno:
+            t.turno,
+
+          nome:
+            nomeExcel
+
+        };
+      })
+      .filter(t => t !== null);
+
+
+    console.log(
+      '[OneDrive] Dati preparati per Excel:',
+      turniExcel
+    );
+
+
+    // -------------------------------------------------
+    // 6. Chiamata alla Edge Function Supabase
+    // -------------------------------------------------
+
+    const response =
+      await fetch(
+        `${ONEDRIVE_FUNCTION_URL}?action=pubblica-turni`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body: JSON.stringify({
+
+            // Identificativo della settimana
+            settimana:
+              settimana.settimana,
+
+            // Turni con nomi già convertiti
+            // ESCLUSIVAMENTE per Excel
+            turni:
+              turniExcel
+
+          })
+        }
+      );
+
+
+    // -------------------------------------------------
+    // 7. Leggiamo la risposta
+    // -------------------------------------------------
+
+    const result =
+      await response
+        .json()
+        .catch(() => ({}));
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        result?.error ||
+        result?.message ||
+        `Errore OneDrive (${response.status})`
+      );
+    }
+
+
+    // -------------------------------------------------
+    // 8. Successo
+    // -------------------------------------------------
+
+    console.log(
+      '[OneDrive] Excel aggiornato correttamente:',
+      result
+    );
+
+
+    showToast(
+      'Turni pubblicati e file Excel SALA aggiornato su OneDrive!',
+      'success'
+    );
+
+
+    return result;
+
+
   } catch (err) {
-    console.error('[OneDrive] Errore compilazione file:', err);
-    showToast('Turni pubblicati, ma errore aggiornamento file OneDrive: ' + err.message, 'error');
+
+    // -------------------------------------------------
+    // 9. Errore
+    // -------------------------------------------------
+
+    console.error(
+      '[OneDrive] Errore aggiornamento Excel:',
+      err
+    );
+
+
+    showToast(
+      'Turni pubblicati, ma errore aggiornamento Excel OneDrive: ' +
+      err.message,
+      'error'
+    );
+
+
+    throw err;
   }
 }
-
-
-
-
-
-// PS:
-// //Ho preparato l'integrazione, ma prima di poterla far funzionare mi servono alcune cose da te.
-
-// Cosa ho fatto
-// Creato onedrive.js: usa Microsoft Graph + MSAL.js per fare login con il tuo account Microsoft personale e scrivere celle in un file Excel su OneDrive.
-// Agganciato la chiamata in manager.js:269 dentro cambiaStato(): quando lo stato passa a pubblicata, viene invocata compilaFileOneDriveAllaPubblicazione(updated).
-// Aggiunto lo script MSAL.js e il nuovo file in index.html:27.
-// La logica di scrittura (_scriviRangeExcel) è pronta, ma non scrive ancora nulla finché non mi dai la mappatura delle celle — per ora mostra solo un toast informativo.
-// Cosa mi serve da te
-// Registrare un'app su Azure (gratis, 5 minuti) per ottenere un "Client ID":
-
-// Vai su portal.azure.com → cerca "Microsoft Entra ID" → "Registrazioni app" → "Nuova registrazione"
-// Nome: es. "Gestionale Contessa Turni"
-// Tipi di account supportati: "Account Microsoft personali"
-// Piattaforma: "Applicazione a pagina singola (SPA)", URI di reindirizzamento = l'URL esatto dove gira l'app (es. https://tuosito.it/Turni/index.html)
-// Dopo la creazione vai su "Autorizzazioni API" → "Aggiungi un'autorizzazione" → Microsoft Graph → Delegate → cerca Files.ReadWrite
-// Copiami l'"ID applicazione (client)" mostrato nella pagina Overview
-// Il percorso del file su OneDrive (es. /Turni/PianoTurni.xlsx)
-
-// Il nome del foglio Excel da compilare (es. "Foglio1")
-
-// Mostrami il file (screenshot o descrizione) con le celle esatte da compilare (es. "colonna B = nome cameriere, riga 3 = lunedì mattina, ecc.") — appena me lo mostri completo CELL_MAP e la funzione di scrittura.
-
-// Se preferisci, posso anche procedere senza aspettare tutto: dammi anche solo il Client ID e il percorso file, e intanto testiamo che il login funzioni prima di definire le celle.
