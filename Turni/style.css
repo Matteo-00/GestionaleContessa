@@ -1668,8 +1668,8 @@ input::placeholder { color: var(--text-muted); }
   margin-top: 3px;
 }
 
-/* Badge "(Pranzo)" — persona già assegnata a pranzo lo stesso giorno */
-.pranzo-badge {
+/* Badge "(Pranzo)"/"(Cena)" — persona già assegnata all'altro turno lo stesso giorno */
+.altro-turno-badge {
   color: var(--error);
   font-weight: 700;
   font-size: 12px;
