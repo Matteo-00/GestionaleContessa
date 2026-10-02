@@ -183,12 +183,17 @@ async function compilaFileOneDriveAllaPubblicazione(settimana) {
 
         if (!profile) {
 
+          // Profilo mancante: pubblichiamo comunque il turno usando l'user_id come nome
           console.warn(
-            '[OneDrive] Profilo non trovato:',
+            '[OneDrive] Profilo non trovato, uso user_id come nome:',
             t.user_id
           );
 
-          return null;
+          return {
+            giorno: Number(t.giorno),
+            turno: t.turno,
+            nome: t.user_id
+          };
         }
 
 
@@ -207,7 +212,18 @@ async function compilaFileOneDriveAllaPubblicazione(settimana) {
 
 
         if (!nomeCompleto) {
-          return null;
+
+          // Profilo senza nome/cognome: pubblichiamo comunque usando l'user_id
+          console.warn(
+            '[OneDrive] Profilo senza nome/cognome, uso user_id:',
+            t.user_id
+          );
+
+          return {
+            giorno: Number(t.giorno),
+            turno: t.turno,
+            nome: t.user_id
+          };
         }
 
 
@@ -252,10 +268,17 @@ async function compilaFileOneDriveAllaPubblicazione(settimana) {
           nomeExcel =
             nomiExcel[nome];
 
-        } else {
+       } else {
 
-          nomeExcel = undefined;
-        }
+  // Se il nome non è presente nella mappa,
+  // lo mandiamo a Excel esattamente come arriva dal DB.
+  nomeExcel = nomeCompleto;
+
+  console.log(
+    '[OneDrive] Nome non presente nella mappa, uso originale:',
+    nomeCompleto
+  );
+}
 
 
         // ---------------------------------------------
@@ -272,20 +295,6 @@ async function compilaFileOneDriveAllaPubblicazione(settimana) {
           return null;
         }
 
-
-        // ---------------------------------------------
-        // Nome non presente nella mappatura
-        // ---------------------------------------------
-
-        if (!nomeExcel) {
-
-          console.warn(
-            '[OneDrive] Nome NON presente nella mappa Excel:',
-            nomeCompleto
-          );
-
-          return null;
-        }
 
 
         // ---------------------------------------------
@@ -343,16 +352,19 @@ async function compilaFileOneDriveAllaPubblicazione(settimana) {
 
           body: JSON.stringify({
 
-            // Identificativo della settimana
-            settimana:
-              settimana.settimana,
+  // Data iniziale della settimana
+  settimana:
+    settimana.settimana,
 
-            // Turni con nomi già convertiti
-            // ESCLUSIVAMENTE per Excel
-            turni:
-              turniExcel
+  // Data finale della sessione
+  data_fine:
+    settimana.data_fine || null,
 
-          })
+  // Turni da scrivere
+  turni:
+    turniExcel
+
+})
         }
       );
 

@@ -225,10 +225,14 @@ async function cambiaStato(nuovoStato) {
     AppState.settimana = updated;
 
     // Quando si pubblica, elimina automaticamente le settimane più vecchie (mantieni solo ultime 5)
-    if (nuovoStato === 'pubblicata') {
-      await DB.eliminaSettimaneVecchie();
-      compilaFileOneDriveAllaPubblicazione(updated);
-    }
+   if (nuovoStato === 'pubblicata') {
+
+  // Prima aggiorniamo realmente Excel
+  await compilaFileOneDriveAllaPubblicazione(updated);
+
+  // Solo dopo facciamo la pulizia delle vecchie settimane
+  await DB.eliminaSettimaneVecchie();
+}
 
     showToast('Stato aggiornato!', 'success');
     renderManager();
