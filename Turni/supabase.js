@@ -103,11 +103,21 @@ const DB = {
   // Disattiva (elimina logicamente) un profilo: non compare più in nessuna lista
   // e non può più essere usato per accedere. Non cancella l'account di autenticazione.
   async disattivaProfilo(userId) {
-    const { error } = await sb
+    const { data, error } = await sb
       .from('profiles')
       .update({ attivo: false })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select()
+      .maybeSingle();
     if (error) dbError(error, 'Errore eliminazione utente');
+    // Se le policy RLS bloccano l'update, Supabase non dà errore ma aggiorna 0 righe:
+    // senza questo controllo l'utente sembrerebbe eliminato ma in realtà è ancora attivo.
+    if (!data) {
+      throw new Error(
+        'Permessi insufficienti per eliminare questo utente. ' +
+        'Controlla le policy RLS della tabella "profiles" su Supabase (vedi Turni/FIX_RLS_ELIMINA_UTENTI.sql).'
+      );
+    }
   },
 
   // --- Settimane ---
