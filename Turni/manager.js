@@ -579,7 +579,7 @@ async function _openTurnoModalFull(giorno, turno, requiredCount) {
     isWeekendEquita ? DB.getUltime5Settimane() : Promise.resolve([])
   ]);
 
-  const settimanePassate = ultime5.filter(s => s !== settimana.settimana);
+  const settimanePassate = ultime5.filter(s => s !== settimana.settimana).slice(0, 5);
   const equitaCounts = isWeekendEquita
     ? await DB.getEquitaCounts(giorno, turno, settimanePassate)
     : {};

@@ -420,15 +420,16 @@ const DB = {
 
   // --- Equità Turni ---
 
-  // Restituisce i key delle ultime 5 settimane pubblicate
+  // Restituisce i key delle ultime settimane pubblicate (6, per avere un margine
+  // quando la settimana corrente va esclusa dal calcolo dell'equità)
   async getUltime5Settimane() {
     const { data, error } = await sb
       .from('settimane')
       .select('settimana')
       .eq('stato', 'pubblicata')
       .order('settimana', { ascending: false })
-      .limit(5);
-    if (error) dbError(error, 'Errore ultime 5 settimane');
+      .limit(6);
+    if (error) dbError(error, 'Errore ultime settimane');
     return (data || []).map(s => s.settimana);
   },
 
